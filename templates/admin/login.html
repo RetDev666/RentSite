@@ -7,41 +7,367 @@
   <title>Verwaltung · Saunacore</title>
   <link rel="icon" href="/static/favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/admin.css?v=12">
+  <link rel="stylesheet" href="/static/css/admin.css?v=15">
   <style>
-    /* Full CMS & Dashboard Extension */
-    .admin-app { display: none; min-height: 100vh; }
-    .side-nav a { cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 14px; transition: all 0.2s; }
-    .side-nav a:hover { color: #fff; background: rgba(255,255,255,0.05); }
-    .side-nav a.is-active { color: #fff; background: rgba(255,77,0,0.15); font-weight: 600; }
-    .side-nav a svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .view-pane { display: none; }
-    .view-pane.active { display: block; }
-    .turso-badge { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; background: rgba(0,230,153,0.1); color: #00e699; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0,230,153,0.25); }
-    .turso-dot { width: 7px; height: 7px; background: #00e699; border-radius: 50%; box-shadow: 0 0 6px #00e699; }
-    .cms-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
-    .card-panel { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 24px; margin-bottom: 24px; }
-    .card-panel h2 { margin: 0 0 16px; font-size: 18px; font-family: var(--display); letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; color: #fff; }
-    .data-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .data-table th { padding: 12px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .data-table td { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; vertical-align: middle; }
-    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
-    .status-new { background: rgba(0,180,255,0.15); color: #00b4ff; border: 1px solid rgba(0,180,255,0.3); }
-    .status-confirmed { background: rgba(0,230,153,0.15); color: #00e699; border: 1px solid rgba(0,230,153,0.3); }
-    .status-active { background: rgba(255,170,0,0.15); color: #ffaa00; border: 1px solid rgba(255,170,0,0.3); }
-    .status-completed { background: rgba(150,150,150,0.15); color: #bbb; border: 1px solid rgba(150,150,150,0.3); }
-    .status-cancelled { background: rgba(255,50,50,0.15); color: #ff4444; border: 1px solid rgba(255,50,50,0.3); }
-    .status-select { background: #1c1a17; border: 1px solid var(--line); color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px; cursor: pointer; }
-    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .stat-box { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; }
-    .stat-box .num { font-size: 32px; font-family: var(--display); color: #fff; margin: 4px 0 0; }
-    .stat-box .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-    .form-group label { font-size: 13px; color: var(--muted); }
-    .form-group input, .form-group textarea, .form-group select { padding: 10px 14px; background: #0c0b09; border: 1px solid var(--line); color: #fff; border-radius: 6px; font-family: inherit; font-size: 14px; }
-    .form-group textarea { resize: vertical; min-height: 80px; }
-    .toast { position: fixed; bottom: 24px; right: 24px; background: #00e699; color: #000; padding: 14px 28px; border-radius: 6px; font-weight: 600; display: none; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    /* Full Width & Screen Span Fix */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100vh;
+      background: #090908;
+      color: #f7f3ee;
+      box-sizing: border-box;
+      overflow-x: hidden;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    #admin-shell {
+      display: none;
+      width: 100vw;
+      max-width: 100%;
+      min-height: 100vh;
+      grid-template-columns: 260px minmax(0, 1fr);
+      box-sizing: border-box;
+    }
+    #admin-shell.is-active {
+      display: grid !important;
+    }
+
+    .side {
+      width: 260px;
+      min-width: 260px;
+      box-sizing: border-box;
+      background: #070706;
+      border-right: 1px solid rgba(255, 244, 230, 0.08);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 14px 14px;
+      z-index: 40;
+    }
+
+    .main {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      padding: 0 40px 80px !important;
+      flex: 1 1 0% !important;
+      background: #090908;
+    }
+
+    .admin-container {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      padding: 24px 0 60px !important;
+    }
+
+    .side-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    .side-nav a {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      color: #a39890;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .side-nav a:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .side-nav a.is-active {
+      color: #fff;
+      background: rgba(255, 77, 0, 0.18);
+      font-weight: 600;
+      border: 1px solid rgba(255, 77, 0, 0.3);
+    }
+    .side-nav a svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .view-pane {
+      display: none;
+      width: 100%;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .view-pane.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .turso-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(0, 230, 153, 0.1);
+      color: #00e699;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 230, 153, 0.28);
+    }
+    .turso-dot {
+      width: 8px;
+      height: 8px;
+      background: #00e699;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #00e699;
+    }
+
+    .card-panel {
+      background: #141311;
+      border: 1px solid rgba(255, 244, 230, 0.08);
+      border-radius: 10px;
+      padding: 26px 28px;
+      margin-bottom: 24px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .card-panel h2 {
+      margin: 0 0 16px;
+      font-size: 19px;
+      font-family: var(--display);
+      letter-spacing: 0.04em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+    }
+    .card-panel h3.section-header {
+      color: #ff7a3d;
+      font-size: 16px;
+      margin: 28px 0 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 244, 230, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .data-table th {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 244, 230, 0.08);
+      color: #a39890;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .data-table td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      font-size: 14px;
+      vertical-align: middle;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-new { background: rgba(0, 180, 255, 0.15); color: #00b4ff; border: 1px solid rgba(0, 180, 255, 0.3); }
+    .status-confirmed { background: rgba(0, 230, 153, 0.15); color: #00e699; border: 1px solid rgba(0, 230, 153, 0.3); }
+    .status-delivery { background: rgba(255, 170, 0, 0.15); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.3); }
+    .status-active { background: rgba(255, 120, 0, 0.2); color: #ff7700; border: 1px solid rgba(255, 120, 0, 0.4); }
+    .status-completed { background: rgba(150, 150, 150, 0.15); color: #bbb; border: 1px solid rgba(150, 150, 150, 0.3); }
+    .status-cancelled { background: rgba(255, 50, 50, 0.15); color: #ff4444; border: 1px solid rgba(255, 50, 50, 0.3); }
+    .status-select {
+      background: #1c1a17;
+      border: 1px solid rgba(255, 244, 230, 0.15);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+      width: 100%;
+    }
+    .stat-box {
+      background: #141311;
+      border: 1px solid rgba(255, 244, 230, 0.08);
+      border-radius: 10px;
+      padding: 20px 24px;
+    }
+    .stat-box .num {
+      font-size: 34px;
+      font-family: var(--display);
+      color: #fff;
+      margin: 4px 0 0;
+    }
+    .stat-box .label {
+      font-size: 12px;
+      color: #a39890;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+    .form-trio {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) {
+      .form-pair, .form-trio { grid-template-columns: 1fr; }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #c4b9b0;
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      padding: 11px 14px;
+      background: #0c0b09;
+      border: 1px solid rgba(255, 244, 230, 0.12);
+      color: #fff;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      transition: border-color 0.15s ease;
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+      border-color: var(--orange);
+      outline: none;
+    }
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.45;
+    }
+
+    .repeat-item {
+      background: #0d0c0a;
+      border: 1px solid rgba(255, 244, 230, 0.08);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 14px;
+      position: relative;
+    }
+    .repeat-item .btn-remove {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(255, 60, 60, 0.1);
+      border: 1px solid rgba(255, 60, 60, 0.3);
+      color: #ff5555;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .repeat-item .btn-remove:hover {
+      background: #ff4444;
+      color: #fff;
+    }
+
+    .save-bar {
+      position: sticky;
+      bottom: 24px;
+      z-index: 50;
+      background: #141311;
+      border: 1px solid rgba(255, 77, 0, 0.35);
+      border-radius: 10px;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+      margin-top: 24px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #00e699;
+      color: #000;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      display: none;
+      z-index: 9999;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      font-size: 15px;
+    }
+
+    .cms-subnav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255,244,230,0.08);
+      padding-bottom: 12px;
+    }
+    .cms-subnav button {
+      background: #1c1a17;
+      border: 1px solid rgba(255,244,230,0.12);
+      color: #c4b9b0;
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .cms-subnav button.is-active, .cms-subnav button:hover {
+      background: var(--orange);
+      color: #fff;
+      border-color: var(--orange);
+    }
   </style>
 </head>
 <body class="login-body">
@@ -68,14 +394,14 @@
         <button class="btn" type="submit" id="btn-login">Anmelden</button>
         <div style="margin-top: 16px; background: rgba(0,230,153,0.06); border: 1px solid rgba(0,230,153,0.2); padding: 12px; border-radius: 6px; font-size: 12px; color: #ccc; line-height: 1.4;">
           🟢 <strong>Live Cloud-Datenbank:</strong> Turso (rentsite-stanislavzubko)<br>
-          Всі зміни та замовлення синхронізуються безпосередньо з вашою базою.
+          Всі зміни контенту та замовлення синхронізуються безпосередньо з вашою базою.
         </div>
       </form>
     </div>
   </div>
 
-  <!-- 2. FULL EXPANDED ADMIN SHELL -->
-  <div class="shell admin-app" id="admin-shell">
+  <!-- 2. FULL EXPANDED ADMIN SHELL (100% SCREEN WIDTH) -->
+  <div class="shell" id="admin-shell">
     <aside class="side">
       <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span>SAUNACORE</a>
       <p class="side-kicker">Verwaltung</p>
@@ -88,48 +414,48 @@
           <svg viewBox="0 0 24 24"><path d="M8 7h11M8 12h11M8 17h11"/><circle cx="4.5" cy="7" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="17" r="1"/></svg>Buchungen
         </a>
         <a class="nav-item" data-view="view-messages">
-          <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>Nachrichten <em id="nav-msg-count" style="margin-left:auto; font-style:normal; font-size:11px; background:var(--orange); color:#fff; padding:2px 6px; border-radius:10px;">0</em>
+          <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>Nachrichten <em id="nav-msg-count" style="margin-left:auto; font-style:normal; font-size:11px; background:var(--orange); color:#fff; padding:2px 7px; border-radius:10px;">0</em>
         </a>
         <p class="side-label">Katalog</p>
         <a class="nav-item" data-view="view-models">
-          <svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4M4 16l8 4 8-4"/></svg>Modelle
+          <svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4M4 16l8 4 8-4"/></svg>Modelle &amp; Flotte
         </a>
         <a class="nav-item" data-view="view-extras">
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Extras
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Extras &amp; Zubehör
         </a>
         <a class="nav-item" data-view="view-zones">
           <svg viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"/><circle cx="12" cy="11" r="2"/></svg>Lieferzonen
         </a>
         <p class="side-label">Website &amp; CMS</p>
-        <a class="nav-item" data-view="view-content">
+        <a class="nav-item" data-view="view-content" style="color: #ffaa55; font-weight: 600;">
           <svg viewBox="0 0 24 24"><path d="M6 4h9l5 5v11H6z"/><path d="M14 4v6h6M8 13h8M8 17h6"/></svg>Inhalte (CMS)
         </a>
         <a class="nav-item" data-view="view-settings">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>Einstellungen
         </a>
       </nav>
-      <div class="side-foot">
-        <p class="side-status"><span class="turso-dot"></span> Turso Cloud Live</p>
-        <a class="side-out" href="/" target="_blank">Zur Website ↗</a>
-        <button id="btn-logout" style="background:transparent; border:none; color:var(--muted); font-size:13px; cursor:pointer; padding:8px 0; text-align:left;">Abmelden</button>
+      <div class="side-foot" style="margin-top:auto; padding-top:14px; border-top:1px solid rgba(255,244,230,0.08);">
+        <p class="side-status" style="margin:0 0 8px;"><span class="turso-dot"></span> Turso Cloud Live</p>
+        <a class="side-out" href="/" target="_blank" style="display:block; color:#a39890; text-decoration:none; font-size:13px; margin-bottom:6px;">Zur Website ↗</a>
+        <button id="btn-logout" style="background:transparent; border:none; color:#a39890; font-size:13px; cursor:pointer; padding:6px 0; text-align:left; width:100%;">Abmelden</button>
       </div>
     </aside>
 
     <div class="main">
       <header class="topbar">
         <div class="topbar-copy">
-          <p style="margin:0; font-weight:600;">Saunacore Verwaltung</p>
-          <time id="topbar-time" style="font-size:13px; color:var(--muted);"></time>
+          <p style="margin:0; font-weight:600; font-size:17px;">Saunacore Verwaltung &amp; Content Management</p>
+          <time id="topbar-time" style="font-size:13px; color:#a39890;"></time>
         </div>
-        <div class="topbar-actions">
-          <span class="turso-badge"><span class="turso-dot"></span>Turso DB Live</span>
+        <div class="topbar-actions" style="display:flex; align-items:center; gap:12px;">
+          <span class="turso-badge"><span class="turso-dot"></span>Turso DB: rentsite-stanislavzubko</span>
           <button class="btn btn-sm" onclick="loadData()">Aktualisieren ↻</button>
         </div>
       </header>
 
-      <div style="padding: 32px; max-width: 1200px; width: 100%;">
+      <div class="admin-container">
         
-        <!-- VIEW: DASHBOARD (ÜBERBLICK) -->
+        <!-- 1. VIEW: DASHBOARD (ÜBERBLICK) -->
         <div id="view-dashboard" class="view-pane active">
           <div class="stats-row">
             <div class="stat-box"><div class="label">Buchungen gesamt</div><div class="num" id="stat-bookings">0</div></div>
@@ -150,10 +476,13 @@
           </div>
         </div>
 
-        <!-- VIEW: BUCHUNGEN (BOOKINGS) -->
+        <!-- 2. VIEW: BUCHUNGEN (BOOKINGS) -->
         <div id="view-bookings" class="view-pane">
           <div class="card-panel">
             <h2>Alle Buchungen &amp; Termine</h2>
+            <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center;">
+              <input type="text" id="booking-search" placeholder="Suche nach Name, E-Mail, Ort oder Bestellnummer..." style="padding: 10px 14px; background: #0c0b09; border: 1px solid rgba(255,244,230,0.12); color: #fff; border-radius: 6px; width: 100%; max-width: 400px;" oninput="filterBookings()">
+            </div>
             <div style="overflow-x: auto;">
               <table class="data-table">
                 <thead>
@@ -165,31 +494,34 @@
           </div>
         </div>
 
-        <!-- VIEW: MODELLE (FLEET) -->
+        <!-- 3. VIEW: MODELLE (FLEET) -->
         <div id="view-models" class="view-pane">
           <div class="card-panel">
-            <h2>Modelle &amp; Flotte (Preise &amp; Texte in Turso bearbeiten)</h2>
+            <h2>Modelle &amp; Flotte (Preise, Texte &amp; Kapazitäten in Turso bearbeiten)</h2>
+            <p style="color:#a39890; font-size:14px; margin-top:-6px; margin-bottom:20px;">Bearbeite hier Tagessätze, Untertitel, Kurzbeschreibung und Stories der Fasssaunen.</p>
             <div id="models-container"></div>
           </div>
         </div>
 
-        <!-- VIEW: EXTRAS -->
+        <!-- 4. VIEW: EXTRAS -->
         <div id="view-extras" class="view-pane">
           <div class="card-panel">
             <h2>Extras &amp; Zubehör</h2>
+            <p style="color:#a39890; font-size:14px; margin-top:-6px; margin-bottom:20px;">Preise und Bezeichnungen des zubuchbaren Equipments.</p>
             <div id="extras-container"></div>
           </div>
         </div>
 
-        <!-- VIEW: LIEFERZONEN -->
+        <!-- 5. VIEW: LIEFERZONEN -->
         <div id="view-zones" class="view-pane">
           <div class="card-panel">
             <h2>Lieferzonen &amp; Gebiets-Tarife</h2>
+            <p style="color:#a39890; font-size:14px; margin-top:-6px; margin-bottom:20px;">Lieferpauschalen und abgedeckte Postleitzahlen/Städte.</p>
             <div id="zones-container"></div>
           </div>
         </div>
 
-        <!-- VIEW: NACHRICHTEN -->
+        <!-- 6. VIEW: NACHRICHTEN -->
         <div id="view-messages" class="view-pane">
           <div class="card-panel">
             <h2>Kontakt-Nachrichten</h2>
@@ -197,48 +529,162 @@
           </div>
         </div>
 
-        <!-- VIEW: INHALTE (CMS) -->
+        <!-- 7. VIEW: VOLLWERTIGES CMS (INHALTE DER WEBSITE) -->
         <div id="view-content" class="view-pane">
           <div class="card-panel">
-            <h2>✍️ Inhalte der Website (Vollwertiges CMS)</h2>
-            <p style="color:var(--muted); font-size:14px; margin-top:-6px; margin-bottom:24px;">Hier steuerst du alle Texte, Kicker, Überschriften und Inhalte der Website. Gespeichert direkt in deiner Turso Cloud-Datenbank.</p>
-            
-            <form id="cms-form">
-              <h3 style="color:var(--orange); font-size:16px; margin: 20px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px;">Startseite &amp; Hero-Bereich</h3>
-              <div class="form-pair">
-                <div class="form-group"><label>Hero Kicker</label><input id="cms-hero_kicker" name="hero_kicker"></div>
-                <div class="form-group"><label>Hero Bild Pfad</label><input id="cms-hero_image" name="hero_image"></div>
-              </div>
-              <div class="form-group"><label>Hero Haupt-Überschrift</label><textarea id="cms-hero_title" name="hero_title" rows="2"></textarea></div>
-              <div class="form-group"><label>Hero Untertitel (Lede)</label><textarea id="cms-hero_lede" name="hero_lede" rows="2"></textarea></div>
+            <h2>✍️ Vollständiges Content-Management-System (CMS)</h2>
+            <p style="color:#a39890; font-size:14px; margin-top:-6px; margin-bottom:20px;">
+              Verwalte alle Überschriften, Werbetexte, Vorteile, Schritte, FAQs und Rechtstexte des gesamten Internetauftritts. Alle Änderungen werden direkt in deiner <strong>Turso Cloud-Datenbank</strong> gespeichert.
+            </p>
 
-              <h3 style="color:var(--orange); font-size:16px; margin: 28px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px;">Flotten-Bereich</h3>
-              <div class="form-pair">
-                <div class="form-group"><label>Flotten-Titel</label><input id="cms-fleet_title" name="fleet_title"></div>
-                <div class="form-group"><label>Flotten-Text</label><textarea id="cms-fleet_text" name="fleet_text" rows="2"></textarea></div>
+            <div class="cms-subnav">
+              <button type="button" class="is-active" onclick="jumpSection('sec-hero')">Startseite &amp; Hero</button>
+              <button type="button" onclick="jumpSection('sec-points')">Vorteile (3 Karten)</button>
+              <button type="button" onclick="jumpSection('sec-steps')">„So funktioniert's“</button>
+              <button type="button" onclick="jumpSection('sec-pages')">Flotte, Preise &amp; Kontakt</button>
+              <button type="button" onclick="jumpSection('sec-faq')">FAQ (Fragen &amp; Antworten)</button>
+              <button type="button" onclick="jumpSection('sec-legal')">Rechtstexte (AGB, Impressum)</button>
+            </div>
+
+            <form id="cms-full-form">
+
+              <!-- SECTION A: HERO & STARTSEITE -->
+              <div id="sec-hero">
+                <h3 class="section-header">🔥 1. Startseite &amp; Hero-Bereich</h3>
+                <div class="form-pair">
+                  <div class="form-group">
+                    <label>Hero Kicker (Dachzeile)</label>
+                    <input id="cms-hero_kicker" name="hero_kicker" placeholder="z.B. Saunacore">
+                  </div>
+                  <div class="form-group">
+                    <label>Hero Hintergrundbild (Pfad oder Dateiname)</label>
+                    <select id="cms-hero_image" name="hero_image">
+                      <option value="/static/images/hero.jpg">hero.jpg (Standard Hero)</option>
+                      <option value="/static/images/model-x.jpg">model-x.jpg (Fasssauna Natur)</option>
+                      <option value="/static/images/model-xl.jpg">model-xl.jpg (Panorama Sauna)</option>
+                      <option value="/static/images/model-s.jpg">model-s.jpg (Kompakt Sauna)</option>
+                      <option value="/static/images/relax.jpg">relax.jpg (Abenddämmerung)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Hero Haupt-Überschrift (Zeilenumbruch mit Enter)</label>
+                  <textarea id="cms-hero_title" name="hero_title" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>Hero Untertitel / Lead-Text</label>
+                  <textarea id="cms-hero_lede" name="hero_lede" rows="2"></textarea>
+                </div>
+                <div class="form-pair">
+                  <div class="form-group">
+                    <label>Startseite Flotten-Titel</label>
+                    <input id="cms-fleet_title" name="fleet_title">
+                  </div>
+                  <div class="form-group">
+                    <label>Startseite Flotten-Beschreibung</label>
+                    <textarea id="cms-fleet_text" name="fleet_text" rows="2"></textarea>
+                  </div>
+                </div>
               </div>
 
-              <h3 style="color:var(--orange); font-size:16px; margin: 28px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px;">„So funktioniert's“ (3 Schritte)</h3>
-              <div class="form-pair">
-                <div class="form-group"><label>Kicker</label><input id="cms-how_kicker" name="how_kicker"></div>
-                <div class="form-group"><label>Titel</label><input id="cms-how_title" name="how_title"></div>
-              </div>
-              <div class="form-group"><label>Beschreibungstext</label><textarea id="cms-how_lede" name="how_lede" rows="2"></textarea></div>
-
-              <h3 style="color:var(--orange); font-size:16px; margin: 28px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px;">Preise &amp; Kontakt</h3>
-              <div class="form-pair">
-                <div class="form-group"><label>Preise Titel</label><input id="cms-prices_title" name="prices_title"></div>
-                <div class="form-group"><label>Preise Beschreibung</label><textarea id="cms-prices_text" name="prices_text" rows="2"></textarea></div>
+              <!-- SECTION B: VORTEILE (POINTS) -->
+              <div id="sec-points">
+                <h3 class="section-header" style="justify-content: space-between;">
+                  <span>✨ 2. Vorteile &amp; USPs (3 Vorteilskarten)</span>
+                  <button type="button" class="btn btn-sm" onclick="addPointItem()" style="font-size:12px;">＋ Weiteren Vorteil hinzufügen</button>
+                </h3>
+                <p style="color:#a39890; font-size:13px; margin-top:-6px; margin-bottom:14px;">Diese Punkte heben Qualität, Komfort und Service auf der Startseite hervor.</p>
+                <div id="cms-points-container"></div>
               </div>
 
-              <div style="margin-top: 24px;">
-                <button type="submit" class="btn" style="padding: 12px 32px; font-size: 15px;">Alle Inhalte in Turso speichern</button>
+              <!-- SECTION C: SO FUNKTIONIERT'S (STEPS) -->
+              <div id="sec-steps">
+                <h3 class="section-header" style="justify-content: space-between;">
+                  <span>🚀 3. „So funktioniert's“ (Ablauf in 3 Schritten)</span>
+                  <button type="button" class="btn btn-sm" onclick="addStepItem()" style="font-size:12px;">＋ Weiteren Schritt hinzufügen</button>
+                </h3>
+                <div class="form-pair">
+                  <div class="form-group"><label>Kicker</label><input id="cms-how_kicker" name="how_kicker"></div>
+                  <div class="form-group"><label>Seitentitel</label><input id="cms-how_title" name="how_title"></div>
+                </div>
+                <div class="form-group"><label>Einleitungstext</label><textarea id="cms-how_lede" name="how_lede" rows="2"></textarea></div>
+                <div id="cms-steps-container"></div>
               </div>
+
+              <!-- SECTION D: FLOTTE, PREISE, KONTAKT, FOOTER & SEO -->
+              <div id="sec-pages">
+                <h3 class="section-header">📄 4. Flotten-Seite, Preise, Kontakt &amp; SEO</h3>
+                <div class="form-pair">
+                  <div class="form-group"><label>Flotte Seite: Haupttitel</label><input id="cms-fleet_page_title" name="fleet_page_title"></div>
+                  <div class="form-group"><label>Flotte Seite: Text</label><textarea id="cms-fleet_page_text" name="fleet_page_text" rows="2"></textarea></div>
+                </div>
+                <div class="form-pair">
+                  <div class="form-group"><label>Preise Seite: Titel</label><input id="cms-prices_title" name="prices_title"></div>
+                  <div class="form-group"><label>Preise Seite: Text (nutzt {vat}% für MwSt.)</label><textarea id="cms-prices_text" name="prices_text" rows="2"></textarea></div>
+                </div>
+                <div class="form-pair">
+                  <div class="form-group"><label>Kontakt Seite: Titel</label><input id="cms-contact_title" name="contact_title"></div>
+                  <div class="form-group"><label>Kontakt Seite: Text</label><textarea id="cms-contact_text" name="contact_text" rows="2"></textarea></div>
+                </div>
+                <div class="form-pair">
+                  <div class="form-group"><label>Footer-Slogan</label><input id="cms-footer_line" name="footer_line"></div>
+                  <div class="form-group"><label>Öffentliche Domain URL</label><input id="cms-site_url" name="site_url" placeholder="https://rentsite.netlify.app"></div>
+                </div>
+                <div class="form-group">
+                  <label>Firmen und Events (B2B Beschreibung)</label>
+                  <textarea id="cms-corporate_text" name="corporate_text" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>SEO Meta-Beschreibung der Startseite (Suchmaschinen)</label>
+                  <input id="cms-meta_description" name="meta_description" maxlength="300">
+                </div>
+              </div>
+
+              <!-- SECTION E: FAQ -->
+              <div id="sec-faq">
+                <h3 class="section-header" style="justify-content: space-between;">
+                  <span>❓ 5. Häufig gestellte Fragen (FAQ)</span>
+                  <button type="button" class="btn btn-sm" onclick="addFaqItem()" style="font-size:12px;">＋ Neue Frage hinzufügen</button>
+                </h3>
+                <p style="color:#a39890; font-size:13px; margin-top:-6px; margin-bottom:14px;">Wird auf der FAQ-Seite und in den Modellen dargestellt.</p>
+                <div id="cms-faq-container"></div>
+              </div>
+
+              <!-- SECTION F: RECHTSTEXTE -->
+              <div id="sec-legal">
+                <h3 class="section-header">⚖️ 6. Rechtstexte &amp; Richtlinien</h3>
+                <p style="color:#a39890; font-size:13px; margin-top:-6px; margin-bottom:14px;">Absätze trennst du mit einer Leerzeile. Platzhalter: {company}, {vat}, {cancel}, {email}.</p>
+                <div class="form-group">
+                  <label>Hinweis im Impressum</label>
+                  <textarea id="cms-impressum_note" name="impressum_note" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>Datenschutzerklärung (Datenschutz)</label>
+                  <textarea id="cms-privacy_text" name="privacy_text" rows="7"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>Allgemeine Geschäftsbedingungen (AGB)</label>
+                  <textarea id="cms-terms_text" name="terms_text" rows="7"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>Mietbedingungen &amp; Stornierungsregeln</label>
+                  <textarea id="cms-rental_text" name="rental_text" rows="7"></textarea>
+                </div>
+              </div>
+
+              <!-- SAVE BAR -->
+              <div class="save-bar">
+                <div style="color: #ddd; font-size: 14px;">
+                  🟢 <strong>Turso Cloud Verbindung aktiv</strong> · Änderungen werden sofort in der Datenbank gesichert.
+                </div>
+                <button type="submit" class="btn" id="btn-save-cms" style="padding: 12px 36px; font-size: 15px;">💾 Alle CMS-Inhalte in Turso speichern</button>
+              </div>
+
             </form>
           </div>
         </div>
 
-        <!-- VIEW: EINSTELLUNGEN (SETTINGS) -->
+        <!-- 8. VIEW: EINSTELLUNGEN (SETTINGS) -->
         <div id="view-settings" class="view-pane">
           <div class="card-panel">
             <h2>⚙️ Unternehmens-Einstellungen &amp; Steuer</h2>
@@ -253,11 +699,19 @@
               </div>
               <div class="form-pair">
                 <div class="form-group"><label>Straße &amp; Hausnr.</label><input id="set-street"></div>
-                <div class="form-group"><label>PLZ &amp; Stadt</label><input id="set-city"></div>
+                <div class="form-pair" style="margin:0;">
+                  <div class="form-group"><label>PLZ</label><input id="set-postal_code"></div>
+                  <div class="form-group"><label>Stadt</label><input id="set-city"></div>
+                </div>
               </div>
-              <div class="form-pair">
+              <div class="form-trio">
                 <div class="form-group"><label>MwSt. Satz (%)</label><input id="set-vat_percent" type="number"></div>
                 <div class="form-group"><label>USt-IdNr.</label><input id="set-vat_id"></div>
+                <div class="form-group"><label>Kostenlose Stornierung bis (Tage)</label><input id="set-cancellation_days" type="number"></div>
+              </div>
+              <div class="form-pair">
+                <div class="form-group"><label>Mindest-Mietdauer (Nächte)</label><input id="set-min_nights" type="number"></div>
+                <div class="form-group"><label>Maximal-Mietdauer (Nächte)</label><input id="set-max_nights" type="number"></div>
               </div>
               <div style="margin-top: 24px;">
                 <button type="submit" class="btn" style="padding: 12px 32px;">Einstellungen in Turso speichern</button>
@@ -275,6 +729,7 @@
   <script>
     let token = localStorage.getItem('saunacore_turso_token');
     let currentData = null;
+    let allBookingsList = [];
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -289,7 +744,7 @@
       clockEl.textContent = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
     }
 
-    // Check auth
+    // Auto open if token exists
     if (token) {
       openAdminShell();
     }
@@ -337,13 +792,16 @@
       localStorage.removeItem('saunacore_turso_token');
       token = null;
       document.getElementById('admin-shell').style.display = 'none';
-      document.getElementById('login-stage').style.display = 'flex';
+      document.getElementById('admin-shell').classList.remove('is-active');
+      document.getElementById('login-stage').style.display = 'grid';
       document.body.className = 'login-body';
     });
 
     function openAdminShell() {
       document.getElementById('login-stage').style.display = 'none';
-      document.getElementById('admin-shell').style.display = 'flex';
+      const shell = document.getElementById('admin-shell');
+      shell.style.display = 'grid';
+      shell.classList.add('is-active');
       document.body.className = '';
       loadData();
     }
@@ -357,8 +815,16 @@
         a.classList.add('is-active');
         const targetView = document.getElementById(a.dataset.view);
         if (targetView) targetView.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     });
+
+    function jumpSection(secId) {
+      document.querySelectorAll('.cms-subnav button').forEach(b => b.classList.remove('is-active'));
+      event.target.classList.add('is-active');
+      const el = document.getElementById(secId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     // Load All Data from Turso
     async function loadData() {
@@ -374,19 +840,21 @@
         currentData = await res.json();
         if (!currentData.ok) return;
 
-        // Stats
-        document.getElementById('stat-bookings').textContent = currentData.bookings.length;
-        document.getElementById('stat-models').textContent = currentData.models.length;
-        document.getElementById('stat-zones').textContent = currentData.zones.length;
-        document.getElementById('stat-messages').textContent = currentData.messages.length;
-        document.getElementById('nav-msg-count').textContent = currentData.messages.length;
+        allBookingsList = currentData.bookings || [];
 
-        renderBookings(currentData.bookings);
-        renderModels(currentData.models);
+        // Stats
+        document.getElementById('stat-bookings').textContent = allBookingsList.length;
+        document.getElementById('stat-models').textContent = (currentData.models || []).length;
+        document.getElementById('stat-zones').textContent = (currentData.zones || []).length;
+        document.getElementById('stat-messages').textContent = (currentData.messages || []).length;
+        document.getElementById('nav-msg-count').textContent = (currentData.messages || []).length;
+
+        renderBookings(allBookingsList);
+        renderModels(currentData.models || []);
         renderExtras(currentData.extras || []);
         renderZones(currentData.zones || []);
         renderMessages(currentData.messages || []);
-        populateCMS(currentData.settings || {});
+        populateFullCMS(currentData.settings || {});
         populateSettings(currentData.settings || {});
       } catch (err) {
         console.error('Data load error:', err);
@@ -396,11 +864,11 @@
     // Render Bookings
     function renderBookings(list) {
       const labels = { new: 'Neu', confirmed: 'Bestätigt', delivery: 'Unterwegs', active: 'Vermietet', completed: 'Abgeschlossen', cancelled: 'Storniert' };
-      const dashHtml = (!list || list.length === 0) ? '<tr><td colspan="7" style="padding:24px; color:var(--muted); text-align:center;">Noch keine Buchungen vorhanden.</td></tr>' :
+      const dashHtml = (!list || list.length === 0) ? '<tr><td colspan="7" style="padding:24px; color:#a39890; text-align:center;">Noch keine Buchungen vorhanden.</td></tr>' :
         list.slice(0, 8).map(b => `
           <tr>
             <td><strong>${b.number}</strong></td>
-            <td>${b.first_name} ${b.last_name}<br><small style="color:var(--muted);">${b.email}</small></td>
+            <td>${b.first_name} ${b.last_name}<br><small style="color:#a39890;">${b.email}</small></td>
             <td>${b.model_name || 'Sauna'}</td>
             <td>${b.start_date} bis ${b.end_date}</td>
             <td><strong>${(b.gross_cents / 100).toFixed(2).replace('.', ',')} €</strong></td>
@@ -414,14 +882,14 @@
         `).join('');
       document.getElementById('dash-bookings-tbody').innerHTML = dashHtml;
 
-      const allHtml = (!list || list.length === 0) ? '<tr><td colspan="7" style="padding:24px; color:var(--muted); text-align:center;">Noch keine Buchungen vorhanden.</td></tr>' :
+      const allHtml = (!list || list.length === 0) ? '<tr><td colspan="7" style="padding:24px; color:#a39890; text-align:center;">Noch keine Buchungen vorhanden.</td></tr>' :
         list.map(b => `
           <tr>
             <td><strong>${b.number}</strong></td>
-            <td>${b.first_name} ${b.last_name}<br><small style="color:var(--muted);">${b.email} · ${b.phone || ''}</small></td>
+            <td>${b.first_name} ${b.last_name}<br><small style="color:#a39890;">${b.email} · ${b.phone || ''}</small></td>
             <td>${b.address || ''}, ${b.city || ''}</td>
             <td>${b.model_name || 'Sauna'}</td>
-            <td>${b.start_date} bis ${b.end_date}<br><small style="color:var(--muted);">${b.nights} Nächte</small></td>
+            <td>${b.start_date} bis ${b.end_date}<br><small style="color:#a39890;">${b.nights} Nächte</small></td>
             <td><strong>${(b.gross_cents / 100).toFixed(2).replace('.', ',')} €</strong></td>
             <td>
               <select class="status-select" onchange="updateStatus(${b.id}, this.value)">
@@ -431,6 +899,22 @@
           </tr>
         `).join('');
       document.getElementById('all-bookings-tbody').innerHTML = allHtml;
+    }
+
+    function filterBookings() {
+      const q = (document.getElementById('booking-search').value || '').toLowerCase();
+      if (!q) {
+        renderBookings(allBookingsList);
+        return;
+      }
+      const filtered = allBookingsList.filter(b => 
+        (b.number || '').toLowerCase().includes(q) ||
+        (b.first_name || '').toLowerCase().includes(q) ||
+        (b.last_name || '').toLowerCase().includes(q) ||
+        (b.email || '').toLowerCase().includes(q) ||
+        (b.city || '').toLowerCase().includes(q)
+      );
+      renderBookings(filtered);
     }
 
     async function updateStatus(id, newStatus) {
@@ -451,24 +935,36 @@
       document.getElementById('models-container').innerHTML = models.map(m => {
         const img = (JSON.parse(m.images_json || '[]')[0]) || '/static/images/model-x.jpg';
         return `
-          <div style="background:#0e0d0c; border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:16px;">
+          <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:10px; padding:22px; margin-bottom:20px;">
             <div style="display:flex; gap:20px; align-items:flex-start;">
-              <img src="${img}" style="width:120px; height:85px; object-fit:cover; border-radius:6px;">
+              <img src="${img}" style="width:140px; height:100px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
               <div style="flex:1;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <h3 style="margin:0; font-size:20px; color:#fff;">${m.name}</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                   <div>
-                    <span style="font-size:13px; color:var(--muted);">Tagessatz (€): </span>
-                    <input type="number" id="m-price-${m.id}" value="${(m.price_cents/100).toFixed(0)}" style="width:90px; padding:6px; background:#1c1a17; border:1px solid var(--line); color:#fff; border-radius:4px; font-weight:bold;">
+                    <h3 style="margin:0; font-size:22px; color:#fff; font-family:var(--display);">${m.name}</h3>
+                    <small style="color:#a39890;">Slug: ${m.slug}</small>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:14px; color:#a39890;">Tagessatz: </span>
+                    <input type="number" id="m-price-${m.id}" value="${(m.price_cents/100).toFixed(0)}" style="width:100px; padding:8px 10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:bold; font-size:16px;"> <span style="font-size:15px; font-weight:600;">€</span>
                   </div>
                 </div>
-                <div class="form-pair" style="margin-top:12px;">
+                <div class="form-pair">
+                  <div class="form-group"><label>Modell-Name</label><input id="m-name-${m.id}" value="${m.name || ''}"></div>
                   <div class="form-group"><label>Untertitel</label><input id="m-sub-${m.id}" value="${m.subtitle || ''}"></div>
-                  <div class="form-group"><label>Badge (z.B. Bestseller)</label><input id="m-badge-${m.id}" value="${m.badge || ''}"></div>
                 </div>
-                <div class="form-group"><label>Kurzbeschreibung</label><textarea id="m-summary-${m.id}" rows="2">${m.summary || ''}</textarea></div>
-                <div style="text-align:right;">
-                  <button class="btn btn-sm" onclick="saveModel(${m.id})">Änderungen in Turso speichern</button>
+                <div class="form-trio">
+                  <div class="form-group"><label>Badge (z.B. Bestseller / Kompakt)</label><input id="m-badge-${m.id}" value="${m.badge || ''}"></div>
+                  <div class="form-group"><label>Kapazität Min (Personen)</label><input type="number" id="m-cap-min-${m.id}" value="${m.capacity_min || 2}"></div>
+                  <div class="form-group"><label>Kapazität Max (Personen)</label><input type="number" id="m-cap-max-${m.id}" value="${m.capacity_max || 6}"></div>
+                </div>
+                <div class="form-group"><label>Kurzbeschreibung (Flotten-Übersicht)</label><textarea id="m-summary-${m.id}" rows="2">${m.summary || ''}</textarea></div>
+                <div class="form-pair">
+                  <div class="form-group"><label>Story Titel</label><input id="m-story-title-${m.id}" value="${m.story_title || ''}"></div>
+                  <div class="form-group"><label>Story Text (Detailseite)</label><textarea id="m-story-${m.id}" rows="2">${m.story || ''}</textarea></div>
+                </div>
+                <div style="text-align:right; margin-top:8px;">
+                  <button class="btn btn-sm" onclick="saveModel(${m.id})">Änderungen für ${m.name} speichern</button>
                 </div>
               </div>
             </div>
@@ -480,10 +976,15 @@
     async function saveModel(id) {
       const payload = {
         id,
+        name: document.getElementById(`m-name-${id}`).value,
         price_cents: Math.round(parseFloat(document.getElementById(`m-price-${id}`).value) * 100),
         subtitle: document.getElementById(`m-sub-${id}`).value,
         badge: document.getElementById(`m-badge-${id}`).value,
+        capacity_min: parseInt(document.getElementById(`m-cap-min-${id}`).value) || 2,
+        capacity_max: parseInt(document.getElementById(`m-cap-max-${id}`).value) || 6,
         summary: document.getElementById(`m-summary-${id}`).value,
+        story_title: document.getElementById(`m-story-title-${id}`).value,
+        story: document.getElementById(`m-story-${id}`).value,
       };
       const res = await fetch('/api/admin/model', {
         method: 'POST',
@@ -491,19 +992,19 @@
         body: JSON.stringify({ model: payload })
       });
       const data = await res.json();
-      if (data.ok) showToast('Modell in Turso gespeichert!');
+      if (data.ok) showToast('Modell erfolgreich in Turso gespeichert!');
     }
 
     // Render Extras
     function renderExtras(extras) {
       document.getElementById('extras-container').innerHTML = extras.map(ex => `
-        <div style="background:#0e0d0c; border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:8px; padding:18px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
           <div>
             <strong style="font-size:16px; color:#fff;">${ex.name}</strong>
-            <p style="margin:4px 0 0; color:var(--muted); font-size:13px;">${ex.description}</p>
+            <p style="margin:4px 0 0; color:#a39890; font-size:13px;">${ex.description}</p>
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <input type="number" id="ex-price-${ex.id}" value="${(ex.price_cents/100).toFixed(0)}" style="width:80px; padding:6px; background:#1c1a17; border:1px solid var(--line); color:#fff; border-radius:4px;"> €
+            <input type="number" id="ex-price-${ex.id}" value="${(ex.price_cents/100).toFixed(0)}" style="width:85px; padding:7px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:bold;"> €
             <button class="btn btn-sm" onclick="saveExtra(${ex.id})">Speichern</button>
           </div>
         </div>
@@ -524,14 +1025,14 @@
     // Render Zones
     function renderZones(zones) {
       document.getElementById('zones-container').innerHTML = zones.map(z => `
-        <div style="background:#0e0d0c; border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:8px; padding:18px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
           <div>
             <strong style="font-size:16px; color:#fff;">${z.name}</strong>
-            <p style="margin:4px 0 0; color:var(--muted); font-size:13px;">${z.note} (${z.cities || 'Alle Städte'})</p>
+            <p style="margin:4px 0 0; color:#a39890; font-size:13px;">${z.note} (${z.cities || 'Alle Gebiete'})</p>
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <span>Pauschalpreis:</span>
-            <input type="number" id="z-price-${z.id}" value="${(z.price_cents/100).toFixed(0)}" style="width:80px; padding:6px; background:#1c1a17; border:1px solid var(--line); color:#fff; border-radius:4px;"> €
+            <span style="font-size:13px; color:#a39890;">Pauschalpreis:</span>
+            <input type="number" id="z-price-${z.id}" value="${(z.price_cents/100).toFixed(0)}" style="width:85px; padding:7px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:bold;"> €
             <button class="btn btn-sm" onclick="saveZone(${z.id})">Speichern</button>
           </div>
         </div>
@@ -553,55 +1054,301 @@
     function renderMessages(messages) {
       const container = document.getElementById('messages-container');
       if (!messages || messages.length === 0) {
-        container.innerHTML = '<p style="color:var(--muted); padding:16px 0;">Keine neuen Nachrichten vorhanden.</p>';
+        container.innerHTML = '<p style="color:#a39890; padding:16px 0;">Keine neuen Nachrichten vorhanden.</p>';
         return;
       }
       container.innerHTML = messages.map(m => `
-        <div style="background:#0e0d0c; border:1px solid var(--line); border-radius:8px; padding:18px; margin-bottom:12px;">
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-            <strong>${m.name} (${m.email} · ${m.phone || ''})</strong>
-            <small style="color:var(--muted);">${m.created_at}</small>
+        <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:8px; padding:18px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong>${m.name} (<a href="mailto:${m.email}" style="color:var(--orange);">${m.email}</a> · ${m.phone || 'Kein Telefon'})</strong>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <small style="color:#a39890;">${m.created_at}</small>
+              <button class="btn btn-sm" style="background:rgba(255,60,60,0.1); border:1px solid rgba(255,60,60,0.3); color:#ff5555; padding:3px 8px; font-size:11px;" onclick="deleteMessage(${m.id})">Löschen</button>
+            </div>
           </div>
           <p style="margin:0; color:#ddd; font-size:14px; line-height:1.5;">${m.body}</p>
         </div>
       `).join('');
     }
 
-    // CMS Form Populate
-    function populateCMS(s) {
-      const fields = ['hero_kicker', 'hero_image', 'hero_title', 'hero_lede', 'fleet_title', 'fleet_text', 'how_kicker', 'how_title', 'how_lede', 'prices_title', 'prices_text'];
-      fields.forEach(f => {
+    async function deleteMessage(id) {
+      if (!confirm('Nachricht wirklich löschen?')) return;
+      const res = await fetch('/api/admin/message/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Nachricht gelöscht!');
+        loadData();
+      }
+    }
+
+    // -------------------------------------------------------------
+    // DYNAMIC CMS BUILDERS: POINTS, STEPS, FAQ
+    // -------------------------------------------------------------
+    function renderPointsEditor(points) {
+      const container = document.getElementById('cms-points-container');
+      container.innerHTML = points.map((p, idx) => `
+        <div class="repeat-item" data-point-idx="${idx}">
+          <button type="button" class="btn-remove" onclick="removePointItem(${idx})">✕ Entfernen</button>
+          <div class="form-pair" style="margin-bottom:8px;">
+            <div class="form-group">
+              <label>Icon</label>
+              <select class="point-icon">
+                <option value="spark" ${p.icon === 'spark' ? 'selected' : ''}>✨ spark (Funke / Wellness)</option>
+                <option value="leaf" ${p.icon === 'leaf' ? 'selected' : ''}>🌿 leaf (Natur / Holz)</option>
+                <option value="truck" ${p.icon === 'truck' ? 'selected' : ''}>🚚 truck (Lieferung)</option>
+                <option value="flame" ${p.icon === 'flame' ? 'selected' : ''}>🔥 flame (Feuer / Hitze)</option>
+                <option value="shield" ${p.icon === 'shield' ? 'selected' : ''}>🛡️ shield (Sicherheit / Qualität)</option>
+                <option value="clock" ${p.icon === 'clock' ? 'selected' : ''}>⏱️ clock (Pünktlichkeit)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Vorteil Titel</label>
+              <input class="point-title" value="${p.title || ''}" placeholder="z.B. Schnelle Lieferung">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Beschreibung</label>
+            <textarea class="point-text" rows="2" placeholder="Erklärung des Vorteils...">${p.text || ''}</textarea>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addPointItem() {
+      const current = collectPoints();
+      current.push({ icon: 'spark', title: 'Neuer Vorteil', text: 'Beschreibung des Vorteils.' });
+      renderPointsEditor(current);
+    }
+
+    function removePointItem(idx) {
+      const current = collectPoints();
+      if (current.length <= 1) {
+        alert('Mindestens ein Vorteil muss erhalten bleiben.');
+        return;
+      }
+      current.splice(idx, 1);
+      renderPointsEditor(current);
+    }
+
+    function collectPoints() {
+      const items = [];
+      document.querySelectorAll('#cms-points-container .repeat-item').forEach(el => {
+        const icon = el.querySelector('.point-icon').value;
+        const title = el.querySelector('.point-title').value.trim();
+        const text = el.querySelector('.point-text').value.trim();
+        if (title || text) items.push({ icon, title, text });
+      });
+      return items;
+    }
+
+    function renderStepsEditor(steps) {
+      const container = document.getElementById('cms-steps-container');
+      const images = [
+        '/static/images/choose.jpg',
+        '/static/images/deliver.jpg',
+        '/static/images/relax.jpg',
+        '/static/images/hero.jpg',
+        '/static/images/interior.jpg'
+      ];
+      container.innerHTML = steps.map((s, idx) => `
+        <div class="repeat-item" data-step-idx="${idx}">
+          <button type="button" class="btn-remove" onclick="removeStepItem(${idx})">✕ Entfernen</button>
+          <div class="form-pair" style="margin-bottom:8px;">
+            <div class="form-group">
+              <label>Schritt ${idx + 1}: Titel</label>
+              <input class="step-title" value="${s.title || ''}" placeholder="z.B. Auswählen">
+            </div>
+            <div class="form-group">
+              <label>Bild für diesen Schritt</label>
+              <select class="step-image">
+                ${images.map(img => `<option value="${img}" ${s.image === img ? 'selected' : ''}>${img.split('/').pop()}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Beschreibung des Schrittes</label>
+            <textarea class="step-text" rows="2">${s.text || ''}</textarea>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addStepItem() {
+      const current = collectSteps();
+      current.push({ title: 'Neuer Schritt', text: 'Erklärung des Ablaufs.', image: '/static/images/relax.jpg' });
+      renderStepsEditor(current);
+    }
+
+    function removeStepItem(idx) {
+      const current = collectSteps();
+      if (current.length <= 1) {
+        alert('Mindestens ein Schritt muss erhalten bleiben.');
+        return;
+      }
+      current.splice(idx, 1);
+      renderStepsEditor(current);
+    }
+
+    function collectSteps() {
+      const items = [];
+      document.querySelectorAll('#cms-steps-container .repeat-item').forEach(el => {
+        const title = el.querySelector('.step-title').value.trim();
+        const image = el.querySelector('.step-image').value;
+        const text = el.querySelector('.step-text').value.trim();
+        if (title || text) items.push({ title, image, text });
+      });
+      return items;
+    }
+
+    function renderFaqEditor(faq) {
+      const container = document.getElementById('cms-faq-container');
+      container.innerHTML = faq.map((f, idx) => `
+        <div class="repeat-item" data-faq-idx="${idx}">
+          <button type="button" class="btn-remove" onclick="removeFaqItem(${idx})">✕ Entfernen</button>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Frage (${idx + 1})</label>
+            <input class="faq-q" value="${f.q || ''}" placeholder="z.B. Wie funktioniert die Lieferung?">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Ausführliche Antwort</label>
+            <textarea class="faq-a" rows="3" placeholder="Antworttext...">${f.a || ''}</textarea>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addFaqItem() {
+      const current = collectFaq();
+      current.push({ q: 'Neue Frage', a: 'Antwort auf diese Frage.' });
+      renderFaqEditor(current);
+    }
+
+    function removeFaqItem(idx) {
+      const current = collectFaq();
+      if (current.length <= 1) {
+        alert('Mindestens eine FAQ-Frage muss erhalten bleiben.');
+        return;
+      }
+      current.splice(idx, 1);
+      renderFaqEditor(current);
+    }
+
+    function collectFaq() {
+      const items = [];
+      document.querySelectorAll('#cms-faq-container .repeat-item').forEach(el => {
+        const q = el.querySelector('.faq-q').value.trim();
+        const a = el.querySelector('.faq-a').value.trim();
+        if (q || a) items.push({ q, a });
+      });
+      return items;
+    }
+
+    // Populate full CMS Form
+    function populateFullCMS(s) {
+      const textFields = [
+        'hero_kicker', 'hero_image', 'hero_title', 'hero_lede',
+        'fleet_title', 'fleet_text',
+        'how_kicker', 'how_title', 'how_lede',
+        'fleet_page_title', 'fleet_page_text',
+        'prices_title', 'prices_text',
+        'contact_title', 'contact_text',
+        'footer_line', 'site_url', 'corporate_text', 'meta_description',
+        'impressum_note', 'privacy_text', 'terms_text', 'rental_text'
+      ];
+      textFields.forEach(f => {
         const el = document.getElementById('cms-' + f);
         if (el && s[f] !== undefined) el.value = s[f];
       });
+
+      // Parse JSON fields
+      let points = [];
+      try { points = JSON.parse(s.points_json || '[]'); } catch(e){}
+      if (!points || points.length === 0) {
+        points = [
+          { icon: 'leaf', title: 'Premium Holz', text: 'Nachhaltiges Thermoholz für optimale Hitze und Langlebigkeit.' },
+          { icon: 'truck', title: 'Schnelle Lieferung', text: 'Wir bringen die Sauna direkt an deinen Wunschort.' },
+          { icon: 'spark', title: 'Einfache Bedienung', text: 'Intuitive Steuerung für ein ungestörtes Sauna-Erlebnis.' }
+        ];
+      }
+      renderPointsEditor(points);
+
+      let steps = [];
+      try { steps = JSON.parse(s.steps_json || '[]'); } catch(e){}
+      if (!steps || steps.length === 0) {
+        steps = [
+          { title: 'Auswählen', text: 'Wähle dein Modell, den Zeitraum und setze die Markierung auf der Karte. Preis und Verfügbarkeit siehst du sofort.', image: '/static/images/choose.jpg' },
+          { title: 'Wir liefern', text: 'Unser Team bringt die Sauna pünktlich an den markierten Ort, stellt sie sicher auf und gibt dir eine kurze Einweisung.', image: '/static/images/deliver.jpg' },
+          { title: 'Entspannen', text: 'Feuer anfachen, aufheizen und die wohlige Wärme genießen. Nach deiner Buchung holen wir die Sauna einfach wieder ab.', image: '/static/images/relax.jpg' }
+        ];
+      }
+      renderStepsEditor(steps);
+
+      let faq = [];
+      try { faq = JSON.parse(s.faq_json || '[]'); } catch(e){}
+      if (!faq || faq.length === 0) {
+        faq = [
+          { q: 'Wie funktioniert die Lieferung?', a: 'Wir bringen die mobile Sauna auf einem PKW-Anhänger direkt an deine Adresse oder Wunschkoordinaten.' },
+          { q: 'Was ist im Mietpreis enthalten?', a: 'Die Sauna, eine Grundausstattung an Brennholz, Saunadüfte und die Einweisung vor Ort.' },
+          { q: 'Wie storniere ich?', a: 'Bis {cancel} Tage vor Mietbeginn ist die Stornierung kostenlos unter Buchung finden.' }
+        ];
+      }
+      renderFaqEditor(faq);
     }
 
-    // CMS Form Submit
-    document.getElementById('cms-form').addEventListener('submit', async (e) => {
+    // CMS Full Form Submit
+    document.getElementById('cms-full-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const fields = ['hero_kicker', 'hero_image', 'hero_title', 'hero_lede', 'fleet_title', 'fleet_text', 'how_kicker', 'how_title', 'how_lede', 'prices_title', 'prices_text'];
+      const btn = document.getElementById('btn-save-cms');
+      btn.disabled = true;
+      btn.textContent = 'Speichere in Turso...';
+
+      const textFields = [
+        'hero_kicker', 'hero_image', 'hero_title', 'hero_lede',
+        'fleet_title', 'fleet_text',
+        'how_kicker', 'how_title', 'how_lede',
+        'fleet_page_title', 'fleet_page_text',
+        'prices_title', 'prices_text',
+        'contact_title', 'contact_text',
+        'footer_line', 'site_url', 'corporate_text', 'meta_description',
+        'impressum_note', 'privacy_text', 'terms_text', 'rental_text'
+      ];
       const payload = {};
-      fields.forEach(f => {
+      textFields.forEach(f => {
         const el = document.getElementById('cms-' + f);
         if (el) payload[f] = el.value;
       });
 
-      const res = await fetch('/api/admin/content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ content: payload })
-      });
-      const data = await res.json();
-      if (data.ok) {
-        showToast('CMS-Inhalte erfolgreich in Turso gespeichert!');
-      } else {
-        alert('Fehler beim Speichern: ' + (data.error || ''));
+      payload.points_json = collectPoints();
+      payload.steps_json = collectSteps();
+      payload.faq_json = collectFaq();
+
+      try {
+        const res = await fetch('/api/admin/content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ content: payload })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('Alle CMS-Inhalte erfolgreich in Turso gespeichert!');
+        } else {
+          alert('Fehler beim Speichern: ' + (data.error || ''));
+        }
+      } catch (err) {
+        alert('Netzwerkfehler: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Alle CMS-Inhalte in Turso speichern';
       }
     });
 
     // Settings Populate
     function populateSettings(s) {
-      const keys = ['company_name', 'owner_name', 'email', 'phone', 'street', 'city', 'vat_percent', 'vat_id'];
+      const keys = ['company_name', 'owner_name', 'email', 'phone', 'street', 'postal_code', 'city', 'vat_percent', 'vat_id', 'cancellation_days', 'min_nights', 'max_nights'];
       keys.forEach(k => {
         const el = document.getElementById('set-' + k);
         if (el && s[k] !== undefined) el.value = s[k];
@@ -611,7 +1358,7 @@
     // Settings Submit
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const keys = ['company_name', 'owner_name', 'email', 'phone', 'street', 'city', 'vat_percent', 'vat_id'];
+      const keys = ['company_name', 'owner_name', 'email', 'phone', 'street', 'postal_code', 'city', 'vat_percent', 'vat_id', 'cancellation_days', 'min_nights', 'max_nights'];
       const payload = {};
       keys.forEach(k => {
         const el = document.getElementById('set-' + k);

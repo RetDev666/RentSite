@@ -431,6 +431,21 @@ exports.handler = async (event) => {
         }
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
       }
+
+      // POST /api/admin/message/delete
+      if (path === 'admin/message/delete') {
+        let body = {};
+        try {
+          body = JSON.parse(event.body || '{}');
+        } catch (_e) {}
+        if (body.id) {
+          await db.execute({
+            sql: `DELETE FROM messages WHERE id = ?`,
+            args: [Number(body.id)],
+          });
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
     }
 
     return {
