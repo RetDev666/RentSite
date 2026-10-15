@@ -1,0 +1,27 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <h1>Kunden</h1>
+    <p class="lead">Gäste aus den Buchungen, zusammengefasst über die E-Mail.</p>
+  </div>
+</header>
+<div class="panel">
+  <table>
+    <thead><tr><th>Name</th><th>Kontakt</th><th>Buchungen</th><th>Umsatz</th><th>Zuletzt</th></tr></thead>
+    <tbody>
+      {% for customer in customers %}
+      <tr>
+        <td>{{ customer.first_name }} {{ customer.last_name }}</td>
+        <td>{{ customer.email }}<br><small>{{ customer.phone }}</small></td>
+        <td>{{ customer.bookings }}</td>
+        <td>{{ euro(customer.spent or 0) }}</td>
+        <td>{{ format_dt(customer.last_booking) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Noch keine Kunden.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

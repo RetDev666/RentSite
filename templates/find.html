@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-intro">
+  {% include "_crumbs.html" %}
+  <p class="eyebrow">Buchung</p>
+  <h1>Buchung finden</h1>
+  <p>Bestellnummer und dieselbe E-Mail wie bei der Buchung. Beides muss stimmen.</p>
+</section>
+<section class="wrap">
+  <form class="form-card narrow" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+    <label>Bestellnummer<input name="number" required placeholder="SC-2026-1000"></label>
+    <label>E-Mail<input name="email" type="email" required></label>
+    <button class="btn" type="submit">Buchung öffnen</button>
+  </form>
+</section>
+{% endblock %}

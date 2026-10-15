@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+data/*.db
+data/*.db-*
+data/secret.key
+static/uploads/*
+!static/uploads/.gitkeep
+public/
+.netlify/
+.env
+.venv/
+env/
+*.egg-info/
+.DS_Store
+Thumbs.db

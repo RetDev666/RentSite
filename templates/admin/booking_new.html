@@ -1,0 +1,126 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <h1>Neue Buchung</h1>
+    <p class="lead">Telefonische oder manuelle Aufträge. Der Preis kommt vom Server, nicht aus diesem Formular.</p>
+  </div>
+</header>
+<form class="panel form-grid" method="post" id="manual-booking">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label>Modell
+    <select name="model_id" required>
+      {% for model in models %}
+      <option value="{{ model.id }}">{{ model.name }} · {{ euro(model.price_cents) }}/Tag</option>
+      {% endfor %}
+    </select>
+  </label>
+  <div class="pair">
+    <label>Anreise<input type="date" name="start" required></label>
+    <label>Abreise<input type="date" name="end" required></label>
+  </div>
+  <div class="stack-label">Lieferort
+    <div id="manual-map" class="pin-map"></div>
+    <input type="hidden" name="lat" id="manual-lat">
+    <input type="hidden" name="lng" id="manual-lng">
+    <input name="address" id="manual-address" required readonly placeholder="Markierung auf der Karte setzen">
+  </div>
+  <fieldset>
+    <legend>Extras</legend>
+    {% for extra in extras %}
+    <div class="extra-line">
+      <span>{{ extra.name }} · {{ euro(extra.price_cents) }} · {{ kind_labels[extra.kind] }}</span>
+      {% if extra.kind == 'service' %}
+      <label class="check"><input type="checkbox" name="extra_id" value="{{ extra.id }}"> dazu</label>
+      <input type="hidden" name="qty_{{ extra.id }}" value="1">
+      {% else %}
+      <input type="hidden" name="extra_id" value="{{ extra.id }}">
+      <input type="number" name="qty_{{ extra.id }}" value="0" min="0" max="10">
+      {% endif %}
+    </div>
+    {% endfor %}
+  </fieldset>
+  <div class="pair">
+    <label>Vorname<input name="first_name" required></label>
+    <label>Nachname<input name="last_name" required></label>
+  </div>
+  <div class="pair">
+    <label>E-Mail<input name="email" type="email" required></label>
+    <label>Telefon<input name="phone" required></label>
+  </div>
+  <label>Anmerkung<textarea name="notes" rows="3"></textarea></label>
+  <div class="pair">
+    <label>Zahlung
+      <select name="payment_method">
+        <option value="invoice">Rechnung</option>
+        <option value="card">Kreditkarte</option>
+        <option value="paypal">PayPal</option>
+      </select>
+    </label>
+    <label>Status
+      <select name="status">
+        {% for key, label in status_labels.items() %}
+        <option value="{{ key }}" {% if key == 'confirmed' %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <div class="pair">
+    <label>Karte, letzte 4<input name="card_last4" maxlength="4"></label>
+    <label>Marke<input name="card_brand" placeholder="Visa"></label>
+    <label>Ablauf MM/JJ<input name="card_exp" placeholder="12/28"></label>
+  </div>
+  <p class="fine" id="manual-preview"></p>
+  <button class="btn" type="submit">Buchung anlegen</button>
+</form>
+<script>
+  const form = document.getElementById("manual-booking");
+  const preview = document.getElementById("manual-preview");
+  const csrf = document.querySelector('meta[name="csrf"]').content;
+  let timer;
+  async function refresh() {
+    const data = new FormData(form);
+    const extras = [];
+    data.getAll("extra_id").forEach((id) => extras.push({ id: Number(id), qty: Number(data.get("qty_" + id) || 0) }));
+    const res = await fetch("/api/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+      body: JSON.stringify({
+        model_id: Number(data.get("model_id")),
+        start: data.get("start"),
+        end: data.get("end"),
+        address: data.get("address"),
+        lat: data.get("lat"),
+        lng: data.get("lng"),
+        extras
+      })
+    });
+    const json = await res.json();
+    preview.textContent = json.ok ? (json.range_label + " · " + (json.zone ? json.zone.badge + " · " : "") + (json.gross || "Lieferung fehlt")) : json.error;
+  }
+  form.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(refresh, 300); });
+</script>
+{% endblock %}
+{% block scripts %}
+<script>
+  const latInput = document.getElementById("manual-lat");
+  const lngInput = document.getElementById("manual-lng");
+  const addressInput = document.getElementById("manual-address");
+  const manualForm = document.getElementById("manual-booking");
+  if (window.SaunaMap) {
+    SaunaMap.mount(document.getElementById("manual-map"), {
+      interactive: true,
+      onPick: (lat, lng) => {
+        latInput.value = lat;
+        lngInput.value = lng;
+        fetch("/api/reverse?lat=" + encodeURIComponent(lat) + "&lng=" + encodeURIComponent(lng))
+          .then((response) => response.json())
+          .then((data) => {
+            addressInput.value = data.ok ? data.address : "";
+            manualForm.dispatchEvent(new Event("input"));
+          });
+      }
+    });
+  }
+</script>
+{% endblock %}

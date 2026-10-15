@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-intro">
+  {% include "_crumbs.html" %}
+  <p class="eyebrow">FAQ</p>
+  <h1>Häufige Fragen.</h1>
+  <p>Kurz beantwortet.</p>
+</section>
+<section class="wrap faq">
+  {% for item in content.faq %}
+  <details {% if loop.first %}open{% endif %}>
+    <summary>{{ item.q }}</summary>
+    <p>{{ item.a }}</p>
+  </details>
+  {% endfor %}
+</section>
+{% endblock %}

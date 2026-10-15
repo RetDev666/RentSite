@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+{% set place = (settings.street ~ ', ' ~ settings.postal_code ~ ' ' ~ settings.city)|trim %}
+<section class="contact-page">
+  <div class="wrap contact-hero">
+    <div class="page-intro contact-copy">
+      {% include "_crumbs.html" %}
+      <p class="eyebrow">Kontakt</p>
+      <h1>{{ content.contact_title }}</h1>
+      <p>{{ content.contact_text }}</p>
+    </div>
+    <div class="contact-visual">
+      <figure class="contact-photo">
+        <img src="{{ url_for('static', filename='images/interior.jpg') }}" alt="Innenraum einer mobilen Fasssauna aus Thermoholz" fetchpriority="high" decoding="async">
+        <div class="contact-glow" aria-hidden="true"></div>
+        <figcaption>
+          <span class="eyebrow">Vor Ort</span>
+          <strong>Deine Sauna. Geliefert.</strong>
+        </figcaption>
+      </figure>
+      <img class="contact-float" src="{{ url_for('static', filename='images/relax.jpg') }}" alt="Sitzbereich in der mobilen Sauna" loading="lazy" decoding="async">
+    </div>
+  </div>
+
+  <div class="wrap channel-grid">
+    <article class="channel">
+      <p class="eyebrow">01 · Adresse</p>
+      <strong>{{ settings.company_name }}</strong>
+      <span>{{ settings.street }}<br>{{ settings.postal_code }} {{ settings.city }}</span>
+      {% if settings.street %}
+      <span class="channel-actions">
+        <a href="{{ maps_url('', '', place) }}" target="_blank" rel="noopener">In Google Maps öffnen</a>
+        <a href="{{ osm_url('', '', place) }}" target="_blank" rel="noopener">OpenStreetMap</a>
+      </span>
+      {% endif %}
+    </article>
+    <a class="channel" href="mailto:{{ settings.email }}">
+      <p class="eyebrow">02 · E-Mail</p>
+      <strong>{{ settings.email }}</strong>
+      <span>Für Lieferort, Modell und bestehende Termine.</span>
+      <em>E-Mail schreiben</em>
+    </a>
+    <a class="channel" href="tel:{{ settings.phone|replace(' ', '') }}">
+      <p class="eyebrow">03 · Telefon</p>
+      <strong>{{ settings.phone }}</strong>
+      <span>Direkt anrufen. Eine Sprechzeit ist hier nicht hinterlegt.</span>
+      <em>Anrufen</em>
+    </a>
+  </div>
+
+  <section class="wrap contact-grid">
+    <form class="form-card" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <p class="eyebrow">Nachricht</p>
+      <h2>Kurz schreiben.</h2>
+      <p class="fine">Name, E-Mail und ein paar Sätze reichen. Die Nachricht landet in der Admin-Oberfläche.</p>
+      {% if sent %}<p class="flash">Danke. Deine Nachricht ist angekommen.</p>{% endif %}
+      {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+      <label>Name<input name="name" required value="{{ form.name if form else '' }}"></label>
+      <label>E-Mail<input name="email" type="email" required value="{{ form.email if form else '' }}"></label>
+      <label>Telefon<input name="phone" value="{{ form.phone if form else '' }}"></label>
+      <label>Nachricht<textarea name="body" rows="6" required>{{ form.body if form else '' }}</textarea></label>
+      <button class="btn btn-block" type="submit">Nachricht senden</button>
+    </form>
+    <aside class="contact-aside">
+      <p class="eyebrow">Wobei wir helfen</p>
+      <ul class="help-list">
+        <li>
+          <strong>Lieferung und Zone</strong>
+          <span>Die Markierung auf der Karte bestimmt die Zone. Vormittag, Nachmittag oder flexibel ist ein Wunschfenster.</span>
+        </li>
+        <li>
+          <strong>Modell, Extras, Kaution</strong>
+          <span>Kapazität und Ofen stehen beim Modell. Eine Kaution gibt es nur, wenn sie hinterlegt ist.</span>
+        </li>
+        <li>
+          <strong>Bestehende Buchung</strong>
+          <span>Bestellnummer und E-Mail zeigen den Termin. Stornieren geht dort bis zum hinterlegten Tag.</span>
+        </li>
+      </ul>
+      <p>{{ content.corporate }}</p>
+      <nav class="contact-links">
+        <a href="{{ url_for('public.find_booking') }}">Buchung finden</a>
+        <a href="{{ url_for('public.faq') }}">FAQ</a>
+        <a href="{{ url_for('public.fleet') }}">Flotte</a>
+        <a href="{{ url_for('public.prices') }}">Preise</a>
+      </nav>
+      <p class="fine">Wir lesen die Nachricht hier. Eine Antwort per E-Mail geht nur raus, wenn ein Mailserver eingerichtet ist.</p>
+    </aside>
+  </section>
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <h1>Buchungen</h1>
+    <p class="lead">Suche nach Nummer, Name, E-Mail oder Ort. Der Statusfilter zeigt nur eine Stufe.</p>
+  </div>
+  <div class="row-actions">
+    <a class="btn ghost" href="{{ url_for('admin.bookings_export') }}">CSV</a>
+  </div>
+</header>
+<form class="filters" method="get">
+  <input name="q" value="{{ query }}" placeholder="Nummer, Name, E-Mail, Ort">
+  <select name="status">
+    <option value="">Alle Status</option>
+    {% for key, label in status_labels.items() %}
+    <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn" type="submit">Filtern</button>
+</form>
+<div class="panel">
+  <table>
+    <thead><tr><th>Nummer</th><th>Kunde</th><th>Modell</th><th>Zeitraum</th><th>Summe</th><th>Status</th><th>Karte</th></tr></thead>
+    <tbody>
+      {% for booking in bookings %}
+      <tr>
+        <td><a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}">{{ booking.number }}</a></td>
+        <td>{{ booking.first_name }} {{ booking.last_name }}<br><small>{{ booking.email }}</small></td>
+        <td>{{ booking.model_name }}</td>
+        <td>{{ booking.start_date }} – {{ booking.end_date }}<br><small>{{ booking.nights }} Nächte</small></td>
+        <td>{{ euro(booking.gross_cents) }}</td>
+        <td><span class="pill {{ booking.status }}">{{ status_labels[booking.status] }}</span></td>
+        <td><a href="{{ maps_url(booking.lat, booking.lng, booking.address) }}" target="_blank" rel="noopener">Öffnen</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">Keine Buchungen.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if pages > 1 %}
+<p class="pager">
+  {% if page > 1 %}<a href="{{ url_for('admin.bookings', q=query, status=status, page=page-1) }}">Zurück</a>{% endif %}
+  Seite {{ page }} von {{ pages }}
+  {% if page < pages %}<a href="{{ url_for('admin.bookings', q=query, status=status, page=page+1) }}">Weiter</a>{% endif %}
+</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Betrieb</p>
+    <h1>Überblick</h1>
+    <p class="lead">Neue Aufträge, was als Nächstes rausgeht, und wo die Saunen stehen.</p>
+  </div>
+</header>
+<div class="stats">
+  <article><span>Neue Buchungen</span><strong>{{ stats.new }}</strong><em>Status neu</em></article>
+  <article><span>Anstehend</span><strong>{{ stats.upcoming }}</strong><em>Start ab heute</em></article>
+  <article><span>Aktiv vermietet</span><strong>{{ stats.active }}</strong><em>gerade draußen</em></article>
+  <article><span>Umsatz Monat</span><strong>{{ euro(stats.revenue) }}</strong><em>brutto, ohne Storno</em></article>
+  <article><span>Ungelesen</span><strong>{{ stats.messages }}</strong><em>Kontaktformular</em></article>
+</div>
+<div class="dash-grid">
+<section class="panel map-panel">
+  <div class="panel-head"><h2>Lieferkarte</h2><span class="fine">Ein Klick öffnet den Auftrag.</span></div>
+  <div id="ops-map" class="pin-map tall"></div>
+</section>
+<section class="panel">
+  <div class="panel-head"><h2>Nächste Termine</h2><a href="{{ url_for('admin.bookings') }}">Alle</a></div>
+  <ul class="ops-list">
+    {% for booking in upcoming %}
+    <li>
+      <a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}">
+        <span class="ops-main">
+          <strong>{{ booking.number }}</strong>
+          <span>{{ booking.model_name }} · {{ booking.city or booking.address }}</span>
+          <span>{{ booking.start_date }} – {{ booking.end_date }}</span>
+        </span>
+        <span class="pill {{ booking.status }}">{{ status_labels[booking.status] }}</span>
+      </a>
+    </li>
+    {% else %}
+    <li class="ops-empty">Keine anstehenden Buchungen.</li>
+    {% endfor %}
+  </ul>
+</section>
+</div>
+<section class="panel">
+  <div class="panel-head"><h2>Zuletzt eingegangen</h2><a href="{{ url_for('admin.bookings') }}">Alle</a></div>
+  <table>
+    <thead><tr><th>Nummer</th><th>Kunde</th><th>Summe</th><th>Zahlung</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for booking in recent %}
+      <tr>
+        <td><a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}">{{ booking.number }}</a></td>
+        <td>{{ booking.first_name }} {{ booking.last_name }}</td>
+        <td>{{ euro(booking.gross_cents) }}</td>
+        <td>{{ booking.payment_method }} · {{ booking.payment_status }}</td>
+        <td><span class="pill {{ booking.status }}">{{ status_labels[booking.status] }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  const pins = {{ pins|tojson }};
+  if (window.SaunaMap) SaunaMap.pins(document.getElementById("ops-map"), pins);
+</script>
+{% endblock %}

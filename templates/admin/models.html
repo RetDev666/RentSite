@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <h1>Modelle</h1>
+    <p class="lead">Die Flotte auf der Website. Preis, Plätze, Fotos und Geräte änderst du hier.</p>
+  </div>
+  <a class="btn" href="{{ url_for('admin.model_new') }}">Neues Modell</a>
+</header>
+<div class="panel">
+  <table>
+    <thead><tr><th></th><th>Name</th><th>Preis</th><th>Personen</th><th>Geräte</th><th>Größe</th><th>Aktiv</th></tr></thead>
+    <tbody>
+      {% for model in models %}
+      <tr>
+        <td>{% if model.images %}<img class="thumb" src="{{ model.images[0] }}" alt="">{% endif %}</td>
+        <td><a href="{{ url_for('admin.model_edit', model_id=model.id) }}">{{ model.name }}</a><br><small>{{ model.badge }}</small></td>
+        <td>{{ euro(model.price_cents) }}</td>
+        <td>{{ model.capacity_min }}–{{ model.capacity_max }}</td>
+        <td>{{ model.units }}</td>
+        <td>{{ model.size }}</td>
+        <td>{% if model.active %}<span class="flag on">aktiv</span>{% else %}<span class="flag">aus</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

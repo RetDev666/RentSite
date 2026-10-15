@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <h1>Nachrichten</h1>
+    <p class="lead">Anfragen vom Kontaktformular. Die Antwort bleibt hier gespeichert. Verschickt wird sie nur, wenn ein Mailserver hinterlegt ist.</p>
+  </div>
+</header>
+{% for message in messages %}
+<article class="panel {% if not message.read %}is-unread{% endif %}">
+  <p><strong>{{ message.name }}</strong> · {{ message.email }} {% if message.phone %}· {{ message.phone }}{% endif %}</p>
+  <p class="fine">{{ format_dt(message.created_at) }}</p>
+  <p>{{ message.body }}</p>
+  {% if message.reply %}
+  <p><strong>Antwort</strong>{% if message.replied_at %} · {{ format_dt(message.replied_at) }}{% endif %}</p>
+  <p>{{ message.reply }}</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('admin.message_reply', message_id=message.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Antwort<textarea name="reply" rows="3">{{ message.reply }}</textarea></label>
+    <button class="btn" type="submit">Antwort speichern</button>
+    <p class="fine">Versand nur, wenn unter Einstellungen ein Mailserver steht. Sonst bleibt die Antwort nur hier.</p>
+  </form>
+  <div class="row-actions">
+    {% if not message.read %}
+    <form method="post" action="{{ url_for('admin.message_read', message_id=message.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Gelesen</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{ url_for('admin.message_delete', message_id=message.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Löschen</button>
+    </form>
+  </div>
+</article>
+{% else %}
+<p>Keine Nachrichten.</p>
+{% endfor %}
+{% endblock %}

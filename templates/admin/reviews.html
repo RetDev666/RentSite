@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head"><h1>Bewertungen</h1></header>
+<p class="fine">Ohne Eintrag zeigt die Website keinen Bewertungsblock. Keine Beispielstimmen werden angelegt.</p>
+<form class="panel form-grid" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="pair">
+    <label>Name<input name="author" required></label>
+    <label>Sterne
+      <select name="rating">
+        {% for star in [5, 4, 3, 2, 1] %}<option value="{{ star }}">{{ star }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Modell
+      <select name="model_slug">
+        <option value="">Alle Seiten</option>
+        {% for model in models %}<option value="{{ model.slug }}">{{ model.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Reihenfolge<input name="sort_order" type="number" value="0"></label>
+  </div>
+  <label>Text<textarea name="text" rows="4" required></textarea></label>
+  <label class="check"><input type="checkbox" name="active" value="1" checked> sichtbar</label>
+  <button class="btn" type="submit">Bewertung speichern</button>
+</form>
+<div class="panel">
+  {% for review in reviews %}
+  <article>
+    <p><strong>{{ review.author }}</strong> · {{ review.rating }}/5 {% if review.model_slug %}· {{ review.model_slug }}{% endif %} {% if not review.active %}· versteckt{% endif %}</p>
+    <p>{{ review.text }}</p>
+    <form method="post" action="{{ url_for('admin.review_delete', review_id=review.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Löschen</button>
+    </form>
+  </article>
+  {% else %}
+  <p>Keine Bewertungen.</p>
+  {% endfor %}
+</div>
+{% endblock %}

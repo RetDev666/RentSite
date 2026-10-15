@@ -1,0 +1,4 @@
+Flask==3.1.2
+serverless-wsgi>=3.0.4
+gunicorn>=21.2.0
+werkzeug>=3.0.0

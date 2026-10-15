@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="thanks">
+  <div class="check-badge">{{ icon('check') }}</div>
+  <h1>Vielen Dank<br>für deine Buchung!</h1>
+  <p class="order-no">Bestellnummer: {{ booking.number }}</p>
+  <article class="thanks-card">
+    <h2>Zusammenfassung</h2>
+    <div class="thanks-grid">
+      <div><span>Modell</span><strong>{{ booking.model_name }}</strong></div>
+      <div><span>Datum</span><strong>{{ range_label }}</strong></div>
+      <div><span>Preis</span><strong>{{ euro(booking.gross_cents) }}</strong></div>
+    </div>
+    <p>{{ booking.address }}</p>
+    <p>{{ booking.zone_name }}{% if booking.arrival_window %} · {% if booking.arrival_window == 'vormittag' %}Vormittag{% elif booking.arrival_window == 'nachmittag' %}Nachmittag{% else %}Flexibel{% endif %}{% endif %}</p>
+    {% if booking.lat is not none %}
+    <div id="thanks-map" class="pin-map"></div>
+    <p class="row-actions">
+      <a href="{{ maps_url(booking.lat, booking.lng, booking.address) }}" target="_blank" rel="noopener">In Karten öffnen</a>
+    </p>
+    {% endif %}
+    {% if extras %}
+    <ul class="thanks-extras">
+      {% for extra in extras %}
+      <li>{{ extra.qty }}× {{ extra.name }} · {{ extra.line }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if booking.deposit_cents %}
+    <p>Kaution {{ euro(booking.deposit_cents) }}, im Gesamtpreis enthalten.</p>
+    {% endif %}
+    {% if booking.voucher_cents %}
+    <p>Gutschein {{ booking.voucher_code }}: −{{ euro(booking.voucher_cents) }}</p>
+    {% endif %}
+    {% if booking.company %}
+    <p>{{ booking.company }}{% if booking.company_vat %} · {{ booking.company_vat }}{% endif %}</p>
+    {% endif %}
+    <h3>Nächste Schritte</h3>
+    <p>Deine Buchung ist aufgenommen. Wir melden uns in Kürze zur finalen Abstimmung des Lieferzeitpunkts. Die Zusammenfassung bleibt unter dieser Bestellnummer gespeichert.</p>
+    {% if mail_sent %}
+    <p>Die Bestätigung liegt im Postausgang.</p>
+    {% endif %}
+    {% if booking.status == 'cancelled' %}
+    <p>Diese Buchung ist storniert. Der Zeitraum ist wieder frei.</p>
+    {% endif %}
+    <p><a href="{{ url_for('public.guest_pdf', number=booking.number, t=token) }}">Beleg als PDF</a></p>
+    {% if can_cancel %}
+    <form method="post" action="{{ url_for('public.guest_cancel', number=booking.number) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="t" value="{{ token }}">
+      {% if cancel_error %}<p class="form-error">{{ cancel_error }}</p>{% endif %}
+      <button class="btn" type="submit">Kostenlos stornieren</button>
+    </form>
+    <p class="fine">Kostenlos bis {{ settings.cancellation_days }} Tage vor Mietbeginn.</p>
+    {% elif cancel_error %}
+    <p class="form-error">{{ cancel_error }}</p>
+    {% endif %}
+  </article>
+  <a class="btn" href="{{ url_for('public.home') }}">Zurück zur Startseite</a>
+</section>
+{% endblock %}
+{% block scripts %}
+{% if booking.lat is not none %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!window.SaunaMap) return;
+    SaunaMap.mount(document.getElementById("thanks-map"), {
+      lat: {{ booking.lat }},
+      lng: {{ booking.lng }},
+      interactive: false,
+      consent: true,
+      zoom: 15
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}

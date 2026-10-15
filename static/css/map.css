@@ -1,0 +1,25 @@
+.pin-map.leaflet-container { width: 100%; height: 280px; background: #d9d3c8; }
+.book-card .pin-map.leaflet-container { height: 240px; }
+.pin-map.tall.leaflet-container { height: 460px; }
+.leaflet-container,
+.leaflet-container * { box-sizing: content-box; }
+.leaflet-container img,
+.leaflet-container canvas { max-width: none !important; max-height: none !important; }
+.leaflet-container img.leaflet-tile { mix-blend-mode: normal !important; }
+.leaflet-marker-icon.sauna-pin {
+  background: none !important;
+  border: 0 !important;
+  overflow: visible !important;
+}
+.sauna-pin span {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 4px 0 0 5px;
+  background: #ff4d00;
+  border: 2px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .55);
+  box-sizing: border-box;
+}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-intro">
+  {% include "_crumbs.html" %}
+  <p class="eyebrow">{{ content.fleet_title }}</p>
+  <h1>{{ content.fleet_page_title }}</h1>
+  <p>{{ content.fleet_page_text }}</p>
+</section>
+<div class="wrap">
+  <div class="filter-bar">
+    <span class="filter-label">Filter</span>
+    <label>
+      <span class="sr-only">Personen</span>
+      <select id="filter-persons">
+        <option value="alle">Personen (Alle)</option>
+        <option value="2-4">2–4 Personen</option>
+        <option value="4-6">4–6 Personen</option>
+        <option value="6-8">6–8 Personen</option>
+      </select>
+    </label>
+    <label>
+      <span class="sr-only">Größe</span>
+      <select id="filter-size">
+        <option value="alle">Größe (Alle)</option>
+        <option value="kompakt">Kompakt</option>
+        <option value="mittel">Mittel</option>
+        <option value="gross">Groß</option>
+      </select>
+    </label>
+    <label class="filter-search">
+      <span class="sr-only">PLZ oder Ort</span>
+      <input id="filter-place" type="text" placeholder="PLZ oder Ort…" autocomplete="postal-code">
+      {{ icon('pin') }}
+    </label>
+  </div>
+  <p id="zone-banner" class="zone-banner" hidden></p>
+  <div class="card-grid two" id="fleet-grid">
+    {% for model in models %}
+    <article class="model-card fleet-card" data-persons="{{ model.persons }}" data-size="{{ model.size }}">
+      <a class="model-photo" href="{{ url_for('public.model_page', slug=model.slug) }}">
+        <img src="{{ model.images[0] }}" alt="{{ model.name }}">
+        {% if model.badge %}<span class="badge">{{ model.badge }}</span>{% endif %}
+      </a>
+      <div class="model-body">
+        <div class="model-top">
+          <h3><a href="{{ url_for('public.model_page', slug=model.slug) }}">{{ model.name }}</a></h3>
+          <span class="price-pill">ab {{ euro(model.price_cents) }} / Tag</span>
+        </div>
+        <ul class="feature-row">
+          {% for feature in model.features %}
+          <li>{{ icon(feature.icon) }}<span>{{ feature.label }}</span></li>
+          {% endfor %}
+        </ul>
+        <a class="btn btn-ghost" href="{{ url_for('public.model_page', slug=model.slug) }}">Details ansehen</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  <p id="fleet-empty" class="empty" hidden>Keine Modelle für diesen Filter.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}?v=4">
+{% endblock %}
+{% block map_scripts %}
+<script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}?v=4" defer></script>
+<script src="{{ url_for('static', filename='js/pinmap.js') }}?v=6" defer></script>
+{% endblock %}
+{% block content %}
+<section class="wizard wrap">
+  <p class="eyebrow" id="step-kicker">Schritt 01/04</p>
+  <ol class="stepper" id="stepper">
+    <li data-step="1" class="is-current"><span>01</span> Datum &amp; Ort</li>
+    <li data-step="2"><span>02</span> Extras</li>
+    <li data-step="3"><span>03</span> Daten</li>
+    <li data-step="4"><span>04</span> Zahlung</li>
+  </ol>
+  <p class="form-error banner" id="error-banner" hidden></p>
+
+  <div class="step-panel" id="panel-1" data-step="1">
+    <div class="when-grid">
+      <article class="dark-card">
+        <div class="card-head">
+          <h2>Wann?</h2>
+          <div class="month-nav">
+            <button type="button" id="cal-prev" aria-label="Vorheriger Monat">‹</button>
+            <button type="button" id="cal-next" aria-label="Nächster Monat">›</button>
+          </div>
+        </div>
+        <p class="cal-title" id="cal-title"></p>
+        <div class="cal-weekdays"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="range-foot">
+          <span>Gewählter Zeitraum</span>
+          <strong id="range-label">Bitte An- und Abreise wählen</strong>
+        </div>
+      </article>
+      <div>
+        <article class="dark-card">
+          <h2>Wohin?</h2>
+          <p class="fine">Klicke auf die Karte oder ziehe die Markierung. Die Adresse und die Lieferzone kommen von diesem Punkt.</p>
+          <div id="pin-map" class="pin-map"></div>
+          <p class="pin-readout" id="address">Noch keine Markierung</p>
+          <p class="zone-chip" id="zone-badge">Lieferzone nach Markierung</p>
+          <label class="window-pick">Lieferfenster
+            <select id="arrival-window">
+              <option value="">Bitte wählen</option>
+              <option value="vormittag">Vormittag, ca. 8–12 Uhr</option>
+              <option value="nachmittag">Nachmittag, ca. 12–17 Uhr</option>
+              <option value="flexibel">Flexibel</option>
+            </select>
+          </label>
+        </article>
+        <button class="btn btn-block" type="button" id="btn-to-extras">Weiter zu Extras <span aria-hidden="true">→</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-panel" id="panel-2" data-step="2" hidden>
+    <div class="extras-layout">
+      <div>
+        <h2 class="split-title"><span>Machen Sie es</span> perfekt.</h2>
+        <p class="prose">Vervollständigen Sie Ihr Sauna-Erlebnis mit unseren Zusatzleistungen. Materialien und Services für maximale Entspannung.</p>
+        <div class="extra-grid">
+          {% for extra in extras %}
+          <article class="extra-card" data-extra-id="{{ extra.id }}" data-kind="{{ extra.kind }}">
+            <div class="extra-photo">
+              {% if extra.image %}<img src="{{ extra.image }}" alt="{{ extra.name }}" loading="lazy" decoding="async">{% else %}<span class="broom">{{ icon('spark') }}</span>{% endif %}
+              <span class="badge">{{ kind_labels[extra.kind] }}</span>
+            </div>
+            <div class="extra-body">
+              <div class="model-top">
+                <h3>{{ extra.name }}</h3>
+                <span class="plus-price">+ {{ euro(extra.price_cents) }}</span>
+              </div>
+              <p>{{ extra.description }}</p>
+              {% if extra.kind == 'service' %}
+              <div class="qty-row">
+                <span>Status</span>
+                <button type="button" class="add-service" data-add>Hinzufügen</button>
+              </div>
+              {% else %}
+              <div class="qty-row">
+                <span>Anzahl</span>
+                <div class="qty">
+                  <button type="button" data-dec aria-label="Weniger">−</button>
+                  <output>0</output>
+                  <button type="button" data-inc aria-label="Mehr">+</button>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+      <aside class="summary-card" id="summary-side">
+        <p class="eyebrow">Auswahl</p>
+        <div id="summary-model"></div>
+        <div id="summary-lines"></div>
+        <p class="sum-row big"><span>Gesamt</span><strong id="summary-total">—</strong></p>
+        <p class="fine" id="summary-vat"></p>
+        <button class="btn btn-block" type="button" id="btn-to-data">Weiter zu Daten <span aria-hidden="true">→</span></button>
+        <p class="fine lock">{{ icon('lock') }} Deine Daten werden verschlüsselt übertragen. Keine Zahlung in diesem Schritt.</p>
+      </aside>
+    </div>
+  </div>
+
+  <div class="step-panel" id="panel-3" data-step="3" hidden>
+    <div class="narrow">
+      <h2>Persönliche Daten</h2>
+      <p class="prose">Bitte gib deine Kontaktdaten für die Buchung an.</p>
+      <div class="form-card light-fields">
+        <div class="split">
+          <label>Vorname<input id="first-name" autocomplete="given-name" placeholder="Max"></label>
+          <label>Name<input id="last-name" autocomplete="family-name" placeholder="Mustermann"></label>
+        </div>
+        <div class="split">
+          <label>E-Mail<input id="email" type="email" autocomplete="email" placeholder="max@beispiel.de"></label>
+          <label>Telefon<input id="phone" type="tel" autocomplete="tel" placeholder="+49 123 456789"></label>
+        </div>
+        <label>Lieferort (von der Karte)
+          <input id="address-confirm" readonly>
+        </label>
+        <label>Anmerkungen (optional)
+          <textarea id="notes" rows="3" placeholder="Besondere Hinweise für die Lieferung…"></textarea>
+        </label>
+        <label>Gutscheincode (optional)<input id="voucher" maxlength="40" autocomplete="off"></label>
+        <div class="split">
+          <label>Firma (optional)<input id="company" maxlength="120"></label>
+          <label>USt-IdNr. (optional)<input id="company-vat" maxlength="20"></label>
+        </div>
+        <fieldset class="checks-box">
+          <legend>Vor der Buchung</legend>
+          <label><input class="access-check" type="checkbox"> Zufahrt für einen Transporter ist vorhanden.</label>
+          <label><input class="access-check" type="checkbox"> Die Stellfläche ist frei und einigermaßen eben.</label>
+          <label><input class="access-check" type="checkbox"> Jemand ist zur Übergabe vor Ort.</label>
+          <label><input class="access-check" type="checkbox"> Ich habe die Mietbedingungen gelesen.</label>
+        </fieldset>
+        <div class="form-actions">
+          <button type="button" class="text-btn" id="btn-back-extras">Zurück</button>
+          <button type="button" class="btn" id="btn-to-pay">Weiter zur Zahlung</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-panel" id="panel-4" data-step="4" hidden>
+    <div class="pay-layout">
+      <div>
+        <h2>Zusammenfassung &amp; Zahlung</h2>
+        {% if boot.stripe %}
+        <p class="prose">Karte und PayPal laufen über den Zahlungsdienstleister. Die Kartennummer wird hier nicht gespeichert.</p>
+        {% else %}
+        <p class="prose">Bitte prüfe deine Angaben und wähle eine Zahlungsart. In dieser Installation wird keine Karte belastet.</p>
+        {% endif %}
+        <article class="dark-card">
+          <h3>{{ icon('card') }} Zahlungsart</h3>
+          <div class="pay-options" id="pay-options">
+            <label class="pay-option is-selected">
+              <input type="radio" name="pay" value="card" checked>
+              <span><strong>Kreditkarte</strong><small>Visa, Mastercard oder Amex. Es wird nur die Endung gespeichert.</small></span>
+              {{ icon('card') }}
+            </label>
+            <label class="pay-option">
+              <input type="radio" name="pay" value="paypal">
+              <span><strong>PayPal</strong><small>Wird als PayPal-Auftrag vorgemerkt.</small></span>
+            </label>
+            <label class="pay-option">
+              <input type="radio" name="pay" value="invoice">
+              <span><strong>Rechnung</strong><small>Zahlung nach Erhalt der Rechnung.</small></span>
+            </label>
+          </div>
+          <div class="card-fields light-fields" id="card-fields">
+            <label>Kartennummer<input id="card-number" inputmode="numeric" autocomplete="cc-number" placeholder="4242 4242 4242 4242"></label>
+            <div class="split">
+              <label>Gültig bis<input id="card-exp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/JJ"></label>
+              <label>CVC<input id="card-cvc" inputmode="numeric" autocomplete="cc-csc" placeholder="123"></label>
+            </div>
+            <label>Name auf der Karte<input id="card-name" autocomplete="cc-name" placeholder="Max Mustermann"></label>
+          </div>
+        </article>
+        <article class="dark-card customer-box">
+          <h3>{{ icon('users') }} Ihre Daten</h3>
+          <div class="who" id="who"></div>
+          <button type="button" class="text-btn" id="edit-data">Daten ändern</button>
+        </article>
+      </div>
+      <aside class="summary-card" id="invoice">
+        <h3>Bestellübersicht</h3>
+        <div class="invoice-model">
+          {% if model.images %}<img src="{{ model.images[0] }}" alt="{{ model.name }}">{% endif %}
+          <div><strong id="invoice-name">{{ model.name }}</strong><span>{{ model.subtitle }}</span></div>
+        </div>
+        <div id="invoice-lines"></div>
+        <p class="sum-row"><span>Zwischensumme</span><strong id="invoice-sub">—</strong></p>
+        <p class="sum-row muted"><span id="invoice-vat-label">inkl. MwSt.</span><span id="invoice-vat">—</span></p>
+        <p class="sum-row big"><span>Gesamt</span><strong id="invoice-total">—</strong></p>
+        <button class="btn btn-block" type="button" id="btn-book">Kostenpflichtig buchen <span aria-hidden="true">→</span></button>
+        <p class="fine">Mit dem Klick akzeptierst du die <a href="{{ url_for('public.terms') }}">AGB</a> und die <a href="{{ url_for('public.privacy') }}">Datenschutzbestimmungen</a>. Die Preise sind Endpreise inklusive MwSt.
+          {% if boot.stripe %}Karte und PayPal werden auf der nächsten Seite bezahlt. Rechnung bleibt offen.{% else %}Eine Abbuchung findet in dieser Demo nicht statt.{% endif %}
+        </p>
+      </aside>
+    </div>
+  </div>
+  <noscript><p class="form-error">Zum Buchen wird JavaScript gebraucht.</p></noscript>
+</section>
+<script id="booking-boot" type="application/json">{{ boot|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/booking.js') }}?v=3" defer></script>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <p class="eyebrow">{{ booking.number }}</p>
+    <h1>{{ booking.first_name }} {{ booking.last_name }}</h1>
+    <p class="lead">{{ booking.model_name }} · {{ range_label }}</p>
+  </div>
+  <span class="pill {{ booking.status }}">{{ status_labels[booking.status] }}</span>
+</header>
+<div class="split-panels">
+  <section class="panel">
+    <h2>Auftrag</h2>
+    <p><strong>{{ booking.model_name }}</strong><br>{{ range_label }}</p>
+    <div id="booking-map" class="pin-map"></div>
+    <p class="pin-readout">{{ booking.address }}<br>{{ booking.postal_code }} {{ booking.city }} · {{ booking.zone_name }}</p>
+    <p class="row-actions">
+      <a class="btn" href="{{ maps_url(booking.lat, booking.lng, booking.address) }}" target="_blank" rel="noopener">In Karten öffnen</a>
+      <a class="text-link" href="{{ osm_url(booking.lat, booking.lng, booking.address) }}" target="_blank" rel="noopener">OpenStreetMap</a>
+    </p>
+    <table>
+      <tbody>
+        <tr><td>Miete</td><td>{{ euro(booking.rent_cents) }}</td></tr>
+        <tr><td>Lieferung</td><td>{% if booking.delivery_cents == 0 %}kostenlos{% else %}{{ euro(booking.delivery_cents) }}{% endif %}</td></tr>
+        {% for extra in extras %}
+        <tr><td>{{ extra.qty }}× {{ extra.name }}</td><td>{{ extra.line }}</td></tr>
+        {% endfor %}
+        {% if booking.deposit_cents %}<tr><td>Kaution</td><td>{{ euro(booking.deposit_cents) }}</td></tr>{% endif %}
+        {% if booking.voucher_cents %}<tr><td>Gutschein {{ booking.voucher_code }}</td><td>−{{ euro(booking.voucher_cents) }}</td></tr>{% endif %}
+        <tr><td>inkl. MwSt.</td><td>{{ euro(booking.vat_cents) }}</td></tr>
+        <tr><td>Gesamt</td><td><strong>{{ euro(booking.gross_cents) }}</strong></td></tr>
+      </tbody>
+    </table>
+    <p>Zahlung: {{ booking.payment_method }} · {{ booking.payment_status }}
+      {% if booking.card_last4 %} · {{ booking.card_brand }} ···· {{ booking.card_last4 }} {{ booking.card_exp }}{% endif %}
+    </p>
+    {% if booking.arrival_window %}<p>Lieferfenster: {{ booking.arrival_window }}</p>{% endif %}
+    {% if booking.company %}<p>Firma: {{ booking.company }}{% if booking.company_vat %} · {{ booking.company_vat }}{% endif %}</p>{% endif %}
+    {% if booking.access_ok %}<p>Zugang, Stellfläche und Übergabe wurden bestätigt.</p>{% endif %}
+    <p><a href="{{ url_for('admin.booking_pdf', booking_id=booking.id) }}">PDF</a></p>
+    {% if settings.stripe_secret_set %}
+    <p class="fine">Stripe ist eingerichtet. Kartendaten liegen nicht in dieser Anwendung.</p>
+    {% else %}
+    <p class="fine">Demo: es wird kein Geld abgebucht. Preise bleiben so, wie sie bei der Buchung galten.</p>
+    {% endif %}
+    {% if booking.payment_status != 'paid' %}
+    <form method="post" action="{{ url_for('admin.booking_paid', booking_id=booking.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn" type="submit">Zahlung erhalten</button>
+    </form>
+    {% endif %}
+    {% if booking.notes %}<p>Anmerkung: {{ booking.notes }}</p>{% endif %}
+  </section>
+  <section class="panel">
+    <h2>Status</h2>
+    <form method="post" action="{{ url_for('admin.booking_status', booking_id=booking.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <select name="status">
+        {% for key, label in status_labels.items() %}
+        <option value="{{ key }}" {% if booking.status == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">Speichern</button>
+    </form>
+    <h2>Kontakt</h2>
+    <form method="post" action="{{ url_for('admin.booking_contact', booking_id=booking.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>E-Mail<input name="email" value="{{ booking.email }}"></label>
+      <label>Telefon<input name="phone" value="{{ booking.phone }}"></label>
+      <button class="btn" type="submit">Kontakt speichern</button>
+    </form>
+    <h2>Interne Notiz</h2>
+    <form method="post" action="{{ url_for('admin.booking_note', booking_id=booking.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <textarea name="admin_note" rows="4">{{ booking.admin_note }}</textarea>
+      <button class="btn" type="submit">Notiz speichern</button>
+    </form>
+  </section>
+</div>
+<section class="panel">
+  <h2>Verlauf</h2>
+  <ul class="timeline">
+    {% for event in events %}
+    <li><span>{{ format_dt(event.created_at) }}</span> {{ event.message }}</li>
+    {% endfor %}
+    <li><span>{{ format_dt(booking.created_at) }}</span> Angelegt</li>
+  </ul>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  if (window.SaunaMap) {
+    SaunaMap.mount(document.getElementById("booking-map"), {
+      lat: {{ booking.lat if booking.lat is not none else "null" }},
+      lng: {{ booking.lng if booking.lng is not none else "null" }},
+      interactive: false,
+      zoom: {{ 15 if booking.lat is not none else 11 }}
+    });
+  }
+</script>
+{% endblock %}

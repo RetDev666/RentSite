@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block head %}
+<link rel="preload" as="image" href="{{ content.hero_image }}">
+{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-frame">
+    <img src="{{ content.hero_image }}" alt="Mobile Fasssauna zur Lieferung" fetchpriority="high" decoding="async">
+  </div>
+  <span class="hero-glow" aria-hidden="true"></span>
+  <span class="ember e1" aria-hidden="true"></span>
+  <span class="ember e2" aria-hidden="true"></span>
+  <span class="ember e3" aria-hidden="true"></span>
+  <span class="ember e4" aria-hidden="true"></span>
+  <span class="ember e5" aria-hidden="true"></span>
+  <div class="hero-copy">
+    <p class="eyebrow">{{ content.hero_kicker }}</p>
+    <h1>{{ content.hero_html }}</h1>
+    <p class="lede">{{ content.hero_lede }}</p>
+    <a class="btn" href="{{ url_for('public.fleet') }}">Jetzt buchen</a>
+  </div>
+  <a class="scroll-cue" href="#flotte">Entdecken</a>
+</section>
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    {% for _ in [1, 2] %}
+    <span>Premium Sauna</span>
+    <span>Geliefert</span>
+    <span>Privat</span>
+    <span>Holzofen</span>
+    <span>Wo du willst</span>
+    <span>Aufguss</span>
+    {% endfor %}
+  </div>
+</div>
+<div class="marquee marquee-rev" aria-hidden="true">
+  <div class="marquee-track">
+    {% for _ in [1, 2] %}
+    <span>Model S</span>
+    <span>Model X</span>
+    <span>Model XL</span>
+    <span>Panorama</span>
+    <span>Berlin</span>
+    <span>On Demand</span>
+    {% endfor %}
+  </div>
+</div>
+
+<section class="section" id="flotte">
+  <div class="section-head">
+    <h2>{{ content.fleet_title }}</h2>
+    <p>{{ content.fleet_text }}</p>
+  </div>
+  <div class="card-grid three">
+    {% for model in models %}
+    <a class="model-card" href="{{ url_for('public.model_page', slug=model.slug) }}">
+      <div class="model-photo">
+        <img src="{{ model.images[0] }}" alt="{{ model.name }}">
+        {% if model.badge %}<span class="badge">{{ model.badge }}</span>{% endif %}
+      </div>
+      <div class="model-body">
+        <div class="model-top">
+          <h3>{{ model.name }}</h3>
+          <span class="price-pill">ab {{ euro(model.price_cents) }} / Tag</span>
+        </div>
+        <ul class="feature-row">
+          {% for feature in model.features %}
+          <li>{{ icon(feature.icon) }}<span>{{ feature.label }}</span></li>
+          {% endfor %}
+        </ul>
+        <span class="text-btn">Wählen</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section points">
+  {% for point in content.points %}
+  <article>
+    <span class="point-icon">{{ icon(point.icon) }}</span>
+    <h3>{{ point.title }}</h3>
+    <p>{{ point.text }}</p>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>{{ content.how_kicker }}</h2>
+  </div>
+  <div class="steps">
+    {% for step in content.steps %}
+    <article class="step-row {% if loop.index is even %}flip{% endif %}">
+      <img src="{{ step.image }}" alt="{{ step.title }}" loading="lazy" decoding="async">
+      <div>
+        <h3>{{ step.title }}</h3>
+        <p>{{ step.text }}</p>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% if reviews %}
+<section class="section wrap">
+  <div class="section-head"><h2>Stimmen</h2></div>
+  <div class="review-grid">
+    {% for review in reviews %}
+    <article class="review-card">
+      <strong>{{ review.author }}</strong>
+      <p>{{ review.text }}</p>
+      <span class="fine">{{ review.rating }} / 5{% if review.model_slug %} · {{ review.model_slug }}{% endif %}</span>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

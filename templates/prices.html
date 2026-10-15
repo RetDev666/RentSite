@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-intro">
+  {% include "_crumbs.html" %}
+  <p class="eyebrow">Preise</p>
+  <h1>{{ content.prices_title }}</h1>
+  <p>{{ content.prices_text }}</p>
+</section>
+<section class="wrap price-page">
+  <div class="card-grid two">
+    {% for model in models %}
+    <a class="price-line" href="{{ url_for('public.model_page', slug=model.slug) }}">
+      <div>
+        <strong>{{ model.name }}</strong>
+        <span>{{ model.capacity_min }}–{{ model.capacity_max }} Personen · {{ model.subtitle }}</span>
+      </div>
+      <em>ab {{ euro(model.price_cents) }} / Tag</em>
+    </a>
+    {% endfor %}
+  </div>
+  {% if content.corporate %}
+  <h2>Firmen und Events</h2>
+  <p>{{ content.corporate }}</p>
+  {% endif %}
+  {% if settings.deposit_cents|int > 0 %}
+  <p>Im Endpreis ist eine Kaution von {{ euro(settings.deposit_cents|int) }} enthalten.</p>
+  {% endif %}
+  <h2>Lieferung</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Zone</th><th>Gilt für</th><th>Preis</th></tr></thead>
+      <tbody>
+        {% for zone in zones %}
+        <tr>
+          <td>{{ zone.name }}</td>
+          <td>{{ zone.note }}</td>
+          <td>{% if zone.price_cents == 0 %}kostenlos{% else %}{{ euro(zone.price_cents) }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <h2>Extras</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Leistung</th><th>Art</th><th>Preis</th></tr></thead>
+      <tbody>
+        {% for extra in extras %}
+        <tr>
+          <td>{{ extra.name }}</td>
+          <td>{{ kind_labels[extra.kind] }}</td>
+          <td>{{ euro(extra.price_cents) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

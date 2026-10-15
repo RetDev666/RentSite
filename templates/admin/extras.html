@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <h1>Extras</h1>
+    <p class="lead">Zusatzleistungen im Buchungsassistenten. Art entscheidet, ob der Preis zur Miete, zum Kauf oder zur Dienstleistung zählt.</p>
+  </div>
+  <a class="btn" href="{{ url_for('admin.extra_new') }}">Neues Extra</a>
+</header>
+<div class="panel">
+  <table>
+    <thead><tr><th></th><th>Name</th><th>Art</th><th>Preis</th><th>Aktiv</th></tr></thead>
+    <tbody>
+      {% for extra in extras %}
+      <tr>
+        <td>{% if extra.image %}<img class="thumb" src="{{ extra.image }}" alt="">{% endif %}</td>
+        <td><a href="{{ url_for('admin.extra_edit', extra_id=extra.id) }}">{{ extra.name }}</a></td>
+        <td>{{ kind_labels[extra.kind] }}</td>
+        <td>{{ euro(extra.price_cents) }}</td>
+        <td>{% if extra.active %}<span class="flag on">aktiv</span>{% else %}<span class="flag">aus</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

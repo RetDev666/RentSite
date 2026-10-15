@@ -1,0 +1,123 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <h1>Inhalte</h1>
+    <p class="lead">Texte, FAQ und Bilder der Website. Preise, MwSt., Modelle und Extras bleiben im Katalog und unter Einstellungen. Platzhalter: {vat} {cancel} {email} {phone} {company}.</p>
+  </div>
+</header>
+<form class="content-form" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <section class="panel">
+    <h2>Startseite</h2>
+    <div class="pair">
+      <label>Kicker<input name="hero_kicker" value="{{ settings.hero_kicker }}"></label>
+      <label>Hero-Bild
+        <select name="hero_image">
+          {% for image in images %}
+          <option value="{{ image }}" {% if settings.hero_image == image %}selected{% endif %}>{{ image }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <label>Überschrift, Zeilenumbruch erlaubt<textarea name="hero_title" rows="2">{{ settings.hero_title }}</textarea></label>
+    <label>Unterzeile<textarea name="hero_lede" rows="2">{{ settings.hero_lede }}</textarea></label>
+    <div class="pair">
+      <label>Flotten-Titel<input name="fleet_title" value="{{ settings.fleet_title }}"></label>
+      <label>Flotten-Text<textarea name="fleet_text" rows="2">{{ settings.fleet_text }}</textarea></label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Vorteile</h2>
+    <div id="points">
+      {% for point in points %}
+      <div class="repeat">
+        <select name="point_icon">{% for icon in icons %}<option value="{{ icon }}" {% if point.icon == icon %}selected{% endif %}>{{ icon }}</option>{% endfor %}</select>
+        <input name="point_title" value="{{ point.title }}" placeholder="Titel">
+        <input name="point_text" value="{{ point.text }}" placeholder="Text">
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Schritte</h2>
+    <p class="fine">Dieselben Schritte stehen auf der Startseite und unter „So funktioniert's“.</p>
+    <div id="steps">
+      {% for step in steps %}
+      <div class="repeat step-repeat">
+        <input name="step_title" value="{{ step.title }}" placeholder="Titel">
+        <select name="step_image">{% for image in images %}<option value="{{ image }}" {% if step.image == image %}selected{% endif %}>{{ image.split('/')[-1] }}</option>{% endfor %}</select>
+        <textarea name="step_text" rows="3">{{ step.text }}</textarea>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="pair">
+      <label>Kicker<input name="how_kicker" value="{{ settings.how_kicker }}"></label>
+      <label>Seitentitel<input name="how_title" value="{{ settings.how_title }}"></label>
+    </div>
+    <label>Einleitung<textarea name="how_lede" rows="2">{{ settings.how_lede }}</textarea></label>
+  </section>
+
+  <section class="panel">
+    <h2>Flotten-Seite, Preise, Kontakt, Footer</h2>
+    <label>Flotte, Überschrift<input name="fleet_page_title" value="{{ settings.fleet_page_title }}"></label>
+    <label>Flotte, Text<textarea name="fleet_page_text" rows="2">{{ settings.fleet_page_text }}</textarea></label>
+    <label>Preise, Überschrift<input name="prices_title" value="{{ settings.prices_title }}"></label>
+    <label>Preise, Text<textarea name="prices_text" rows="3">{{ settings.prices_text }}</textarea></label>
+    <label>Kontakt, Überschrift<input name="contact_title" value="{{ settings.contact_title }}"></label>
+    <label>Kontakt, Text<textarea name="contact_text" rows="2">{{ settings.contact_text }}</textarea></label>
+    <label>Footer-Zeile<input name="footer_line" value="{{ settings.footer_line }}"></label>
+    <label>Firmen und Events<textarea name="corporate_text" rows="3">{{ settings.corporate_text }}</textarea></label>
+    <label>Meta-Beschreibung der Startseite<input name="meta_description" value="{{ settings.meta_description }}" maxlength="300" placeholder="Leer lassen für den Hero-Text"></label>
+    <p class="fine">Die übrigen Seiten beschreiben sich aus ihrem eigenen Text. Etwa 150 Zeichen.</p>
+    <label>Öffentliche Adresse<input name="site_url" value="{{ settings.site_url }}" placeholder="https://example.de" inputmode="url"></label>
+    <p class="fine">Leer lassen, solange die Seite nur lokal läuft. Canonical, Sitemap und die Linkvorschau nutzen dann diese Domain.</p>
+  </section>
+
+  <section class="panel">
+    <h2>FAQ</h2>
+    <div id="faq">
+      {% for item in faq %}
+      <div class="repeat faq-repeat">
+        <input name="faq_q" value="{{ item.q }}" placeholder="Frage">
+        <textarea name="faq_a" rows="3">{{ item.a }}</textarea>
+        <button class="btn ghost" type="button" data-remove>Entfernen</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button class="btn ghost" type="button" id="add-faq">Frage hinzufügen</button>
+  </section>
+
+  <section class="panel">
+    <h2>Rechtstexte</h2>
+    <p class="fine">Absätze trennst du mit einer Leerzeile. Firma, Adresse und USt-IdNr. kommen aus den Einstellungen.</p>
+    <label>Hinweis im Impressum<textarea name="impressum_note" rows="3">{{ settings.impressum_note }}</textarea></label>
+    <label>Datenschutz<textarea name="privacy_text" rows="8">{{ settings.privacy_text }}</textarea></label>
+    <label>AGB<textarea name="terms_text" rows="8">{{ settings.terms_text }}</textarea></label>
+    <label>Mietbedingungen<textarea name="rental_text" rows="8">{{ settings.rental_text }}</textarea></label>
+  </section>
+
+  <button class="btn" type="submit">Inhalte speichern</button>
+</form>
+<template id="faq-template">
+  <div class="repeat faq-repeat">
+    <input name="faq_q" placeholder="Frage">
+    <textarea name="faq_a" rows="3" placeholder="Antwort"></textarea>
+    <button class="btn ghost" type="button" data-remove>Entfernen</button>
+  </div>
+</template>
+<script>
+  const faq = document.getElementById("faq");
+  document.getElementById("add-faq").addEventListener("click", () => {
+    faq.appendChild(document.getElementById("faq-template").content.cloneNode(true));
+  });
+  faq.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-remove]");
+    if (!button || faq.children.length < 2) return;
+    button.closest(".repeat").remove();
+  });
+</script>
+{% endblock %}

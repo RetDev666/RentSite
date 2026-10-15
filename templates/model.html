@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="model-layout wrap">
+  {% include "_crumbs.html" %}
+  <div>
+    <div class="gallery" data-gallery>
+      <img id="gallery-main" src="{{ model.images[0] }}" alt="{{ model.name }}" fetchpriority="high" decoding="async">
+      {% if model.images|length > 1 %}
+      <div class="thumbs">
+        {% for image in model.images %}
+        <button type="button" class="{% if loop.first %}is-active{% endif %}" data-src="{{ image }}" aria-label="Bild {{ loop.index }} von {{ model.name }}">
+          <img src="{{ image }}" alt="" loading="lazy" decoding="async">
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <h1><span class="eyebrow">{{ model.name }}</span>{{ model.subtitle }}</h1>
+    <p class="prose">{{ model.summary }}</p>
+    <div class="spec-grid">
+      {% for spec in model.specs %}
+      <article>
+        {{ icon(spec.icon) }}
+        <p class="eyebrow">{{ spec.label }}</p>
+        <strong>{{ spec.value }}</strong>
+      </article>
+      {% endfor %}
+    </div>
+    <h2>{{ model.story_title }}</h2>
+    <p class="prose">{{ model.story }}</p>
+    <ul class="checks">
+      {% for item in model.highlights %}
+      <li>{{ icon('check') }}<span>{{ item }}</span></li>
+      {% endfor %}
+    </ul>
+    {% if model.included_text %}
+    <h2>Enthalten</h2>
+    <ul class="checks">
+      {% for line in model.included_text.splitlines() if line.strip() %}
+      <li>{{ icon('check') }}<span>{{ line }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if model.excluded_text %}
+    <h2>Nicht enthalten</h2>
+    <ul class="checks">
+      {% for line in model.excluded_text.splitlines() if line.strip() %}
+      <li>{{ icon('check') }}<span>{{ line }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if reviews %}
+    <h2>Stimmen</h2>
+    <div class="review-grid">
+      {% for review in reviews %}
+      <article class="review-card">
+        <strong>{{ review.author }}</strong>
+        <p>{{ review.text }}</p>
+        <span class="fine">{{ review.rating }} / 5</span>
+      </article>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  <aside class="book-card" id="buchen"
+         data-model-id="{{ model.id }}"
+         data-base="{{ url_for('public.booking', slug=model.slug) }}"
+         data-price="{{ model.price_cents }}"
+         data-cancel="{{ settings.cancellation_days }}">
+    <p class="eyebrow">Mietpreis ab</p>
+    <p class="big-price">{{ euro(model.price_cents) }} <span>/ Tag</span></p>
+    <p class="eyebrow">Verfügbarkeit prüfen</p>
+    <div class="date-pair">
+      <label>Von<input type="date" id="from"></label>
+      <label>Bis<input type="date" id="to"></label>
+    </div>
+    <div class="stack">
+      <span>Lieferort auf der Karte</span>
+      <div id="place-map" class="pin-map"></div>
+      <p class="fine" id="place-label">Klicke auf die Karte, um die Markierung zu setzen.</p>
+    </div>
+    <p class="fine" id="busy-note">Belegte Nächte werden geladen.</p>
+    <ul class="busy-list" id="busy-list"></ul>
+    <dl class="lines" id="price-lines"></dl>
+    <p class="sum-row"><span>Gesamt</span><strong id="price-total">—</strong></p>
+    <a class="btn" id="go-book" href="{{ url_for('public.booking', slug=model.slug) }}">Jetzt buchen</a>
+    <p class="fine">Kostenlose Stornierung bis {{ settings.cancellation_days }} Tage vor Mietbeginn.</p>
+    {% if settings.deposit_cents|int > 0 %}
+    <p class="fine">Im Endpreis ist eine Kaution von {{ euro(settings.deposit_cents|int) }} enthalten.</p>
+    {% endif %}
+    <p class="form-error" id="book-error" hidden></p>
+  </aside>
+</section>
+{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}?v=4">
+{% endblock %}
+{% block map_scripts %}
+<script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}?v=4" defer></script>
+<script src="{{ url_for('static', filename='js/pinmap.js') }}?v=6" defer></script>
+{% endblock %}

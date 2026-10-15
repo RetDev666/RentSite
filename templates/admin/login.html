@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin · Saunacore</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v=10">
+</head>
+<body class="login-body">
+  <div class="login-stage">
+    <section class="login-hero">
+      <img src="{{ url_for('static', filename='images/hero.jpg') }}" alt="">
+      <div class="login-hero-copy">
+        <a class="logo" href="{{ url_for('public.home') }}"><span class="logo-mark" aria-hidden="true"></span>SAUNACORE</a>
+        <div>
+          <h2>Deine private Sauna. Geliefert.</h2>
+          <p>Wo und wann du willst. Die Verwaltung sitzt hinter dieser Tür.</p>
+        </div>
+      </div>
+    </section>
+    <div class="login-panel">
+    <form class="login-card" method="post">
+      <p class="eyebrow">Verwaltung</p>
+      <h1>Anmelden</h1>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="{{ next_path }}">
+      {% if error %}<p class="flash error">{{ error }}</p>{% endif %}
+      <label>E-Mail<input name="email" type="email" autocomplete="username" required></label>
+      <label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="btn" type="submit">Anmelden</button>
+      {% if hint %}<p class="hint">Lokal: {{ hint }}</p>{% endif %}
+    </form>
+    </div>
+  </div>
+</body>
+</html>

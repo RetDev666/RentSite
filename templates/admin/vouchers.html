@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head"><h1>Gutscheine</h1></header>
+<p class="fine">Der Code mindert Miete, Extras und Lieferung. Die Kaution bleibt im Preis. Eine Stornierung gibt den Code nicht wieder frei.</p>
+<form class="panel form-grid" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="pair">
+    <label>Code<input name="code" required placeholder="SAUNA50"></label>
+    <label>Wert in Euro<input name="amount" required></label>
+    <label>Einlösungen<input name="max_uses" type="number" min="1" value="1"></label>
+  </div>
+  <label>Notiz<input name="note"></label>
+  <label class="check"><input type="checkbox" name="active" value="1" checked> aktiv</label>
+  <button class="btn" type="submit">Gutschein anlegen</button>
+</form>
+<div class="panel">
+  <table>
+    <thead><tr><th>Code</th><th>Wert</th><th>Genutzt</th><th>Notiz</th><th>Aktiv</th><th></th></tr></thead>
+    <tbody>
+      {% for voucher in vouchers %}
+      <tr>
+        <td>{{ voucher.code }}</td>
+        <td>{{ euro(voucher.cents) }}</td>
+        <td>{{ voucher.used }} / {{ voucher.max_uses }}</td>
+        <td>{{ voucher.note }}</td>
+        <td>{% if voucher.active %}ja{% else %}nein{% endif %}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin.voucher_delete', voucher_id=voucher.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">Löschen</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Keine Gutscheine.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

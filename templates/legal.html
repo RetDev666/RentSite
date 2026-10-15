@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="legal wrap">
+  {% include "_crumbs.html" %}
+  {% if legal == 'impressum' %}
+  <h1>Impressum</h1>
+  <p>{{ settings.owner_name }}<br>{{ settings.street }}<br>{{ settings.postal_code }} {{ settings.city }}</p>
+  <p>E-Mail: {{ settings.email }}<br>Telefon: {{ settings.phone }}</p>
+  {% if settings.vat_id %}<p>USt-IdNr.: {{ settings.vat_id }}</p>{% endif %}
+  <p>{{ content.impressum_note }}</p>
+  {% elif legal == 'datenschutz' %}
+  <h1>Datenschutz</h1>
+  <p>Verantwortlich ist {{ settings.owner_name }}, {{ settings.street }}, {{ settings.postal_code }} {{ settings.city }}, {{ settings.email }}.</p>
+  {% for paragraph in content.privacy %}
+  <p>{{ paragraph }}</p>
+  {% endfor %}
+  {% elif legal == 'agb' %}
+  <h1>AGB</h1>
+  {% for paragraph in content.terms %}
+  <p>{{ paragraph }}</p>
+  {% endfor %}
+  {% else %}
+  <h1>Mietbedingungen</h1>
+  {% for paragraph in content.rental %}
+  <p>{{ paragraph }}</p>
+  {% endfor %}
+  {% endif %}
+</article>
+{% endblock %}
