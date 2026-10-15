@@ -1,19 +1,19 @@
 [build]
-  command = "mkdir -p public && cp -r static public/ && pip install -r requirements.txt"
+  command = "pip install -r requirements.txt && python export_static.py"
   publish = "public"
   functions = "netlify/functions"
 
 [build.environment]
   PYTHON_VERSION = "3.11"
 
-# Serve static assets directly from Netlify CDN
+# Route API requests to the Netlify JavaScript Function
 [[redirects]]
-  from = "/static/*"
-  to = "/static/:splat"
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
   status = 200
 
-# Route all web traffic to the Flask application function
+# Fallback 404 page
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/app"
-  status = 200
+  to = "/404.html"
+  status = 404
