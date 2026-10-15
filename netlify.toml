@@ -6,11 +6,7 @@
 [build.environment]
   PYTHON_VERSION = "3.11"
 
-# Route API requests to the Netlify JavaScript Function
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
+# /api/* is served by netlify/functions/api.ts (path is set in the function config)
 
 # Fallback 404 page
 [[redirects]]
