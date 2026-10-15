@@ -1,0 +1,9 @@
+{
+  "name": "carapp-sauna",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Saunacore Rental App",
+  "dependencies": {
+    "@libsql/client": "^0.14.0"
+  }
+}

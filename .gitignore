@@ -10,6 +10,7 @@ public/
 .env
 .venv/
 env/
+node_modules/
 *.egg-info/
 .DS_Store
 Thumbs.db

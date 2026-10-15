@@ -1,10 +1,12 @@
 [build]
-  command = "pip install -r requirements.txt && python export_static.py"
+  command = "npm install && pip install -r requirements.txt && python export_static.py"
   publish = "public"
   functions = "netlify/functions"
 
 [build.environment]
   PYTHON_VERSION = "3.11"
+  TURSO_DATABASE_URL = "libsql://rentsite-stanislavzubko.aws-eu-west-1.turso.io"
+  TURSO_AUTH_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJleHAiOjE4MjM2MjM5NTksImlhdCI6MTc5MjA4Nzk1OSwiaWQiOiIwMWExNDBjMy1mNDAxLTcxNzgtYmJmOC1iOTFhZDJkZmMxNTIiLCJraWQiOiJyVlNETS0xc294U1UzZ3lWV2tWNEYtNzFyQzNZdmFtRm1GN215b0VySlZZIiwicmlkIjoiMzAyZWQ4ZmQtZTU1YS00Yzk4LWI3NTctNTUzNmU2YTJmYmMxIn0.mxXnfB35SnA-iG4vn-FaTjNmz6WR1iJ10_MnnAuD_N3692_BNkmwaAgSseFvlDCGwYzE-QqNlaote-5RpJsYAw"
 
 # Route API requests to the Netlify JavaScript Function
 [[redirects]]
