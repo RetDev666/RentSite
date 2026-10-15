@@ -294,9 +294,10 @@ exports.handler = async (event) => {
       if (path === 'admin/data') {
         const bookingsRes = await db.execute(`SELECT * FROM bookings ORDER BY created_at DESC LIMIT 50`);
         const modelsRes = await db.execute(`SELECT * FROM models ORDER BY sort_order`);
-        const settingsRes = await db.execute(`SELECT key, value FROM settings`);
-        const messagesRes = await db.execute(`SELECT * FROM messages ORDER BY created_at DESC LIMIT 20`);
+        const extrasRes = await db.execute(`SELECT * FROM extras ORDER BY sort_order`);
         const zonesRes = await db.execute(`SELECT * FROM zones WHERE active = 1 ORDER BY sort_order`);
+        const messagesRes = await db.execute(`SELECT * FROM messages ORDER BY created_at DESC LIMIT 20`);
+        const settingsRes = await db.execute(`SELECT key, value FROM settings`);
 
         const settingsMap = {};
         for (const row of settingsRes.rows) {
@@ -310,9 +311,10 @@ exports.handler = async (event) => {
             ok: true,
             bookings: bookingsRes.rows,
             models: modelsRes.rows,
-            settings: settingsMap,
-            messages: messagesRes.rows,
+            extras: extrasRes.rows,
             zones: zonesRes.rows,
+            messages: messagesRes.rows,
+            settings: settingsMap,
           }),
         };
       }
@@ -329,6 +331,74 @@ exports.handler = async (event) => {
           sql: `UPDATE bookings SET status = ? WHERE id = ?`,
           args: [newStatus, bookingId],
         });
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
+
+      // POST /api/admin/content - Update website CMS content
+      if (path === 'admin/content') {
+        let body = {};
+        try {
+          body = JSON.parse(event.body || '{}');
+        } catch (_e) {}
+        const items = body.content || {};
+        for (const [key, value] of Object.entries(items)) {
+          await db.execute({
+            sql: `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+            args: [key, typeof value === 'object' ? JSON.stringify(value) : String(value)],
+          });
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
+
+      // POST /api/admin/model - Update model details
+      if (path === 'admin/model') {
+        let body = {};
+        try {
+          body = JSON.parse(event.body || '{}');
+        } catch (_e) {}
+        const m = body.model || {};
+        if (m.id) {
+          await db.execute({
+            sql: `UPDATE models SET name = ?, subtitle = ?, badge = ?, price_cents = ?, capacity_min = ?, capacity_max = ?, summary = ?, story_title = ?, story = ? WHERE id = ?`,
+            args: [
+              m.name || '', m.subtitle || '', m.badge || '', Number(m.price_cents) || 0,
+              Number(m.capacity_min) || 2, Number(m.capacity_max) || 4,
+              m.summary || '', m.story_title || '', m.story || '', Number(m.id)
+            ],
+          });
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
+
+      // POST /api/admin/zone - Update zone
+      if (path === 'admin/zone') {
+        let body = {};
+        try {
+          body = JSON.parse(event.body || '{}');
+        } catch (_e) {}
+        const z = body.zone || {};
+        if (z.id) {
+          await db.execute({
+            sql: `UPDATE zones SET name = ?, prefixes = ?, cities = ?, price_cents = ?, note = ? WHERE id = ?`,
+            args: [z.name || '', z.prefixes || '', z.cities || '', Number(z.price_cents) || 0, z.note || '', Number(z.id)],
+          });
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
+
+      // POST /api/admin/extra - Update extra
+      if (path === 'admin/extra') {
+        let body = {};
+        try {
+          body = JSON.parse(event.body || '{}');
+        } catch (_e) {}
+        const ex = body.extra || {};
+        if (ex.id) {
+          await db.execute({
+            sql: `UPDATE extras SET name = ?, description = ?, price_cents = ? WHERE id = ?`,
+            args: [ex.name || '', ex.description || '', Number(ex.price_cents) || 0, Number(ex.id)],
+          });
+        }
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
       }
 

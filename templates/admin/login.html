@@ -4,17 +4,54 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Admin · Saunacore</title>
-  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}">
+  <title>Verwaltung · Saunacore</title>
+  <link rel="icon" href="/static/favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v=10">
+  <link rel="stylesheet" href="/static/css/admin.css?v=12">
+  <style>
+    /* Full CMS & Dashboard Extension */
+    .admin-app { display: none; min-height: 100vh; }
+    .side-nav a { cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 14px; transition: all 0.2s; }
+    .side-nav a:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .side-nav a.is-active { color: #fff; background: rgba(255,77,0,0.15); font-weight: 600; }
+    .side-nav a svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .view-pane { display: none; }
+    .view-pane.active { display: block; }
+    .turso-badge { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; background: rgba(0,230,153,0.1); color: #00e699; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0,230,153,0.25); }
+    .turso-dot { width: 7px; height: 7px; background: #00e699; border-radius: 50%; box-shadow: 0 0 6px #00e699; }
+    .cms-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+    .card-panel { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 24px; margin-bottom: 24px; }
+    .card-panel h2 { margin: 0 0 16px; font-size: 18px; font-family: var(--display); letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; color: #fff; }
+    .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .data-table th { padding: 12px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .data-table td { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; vertical-align: middle; }
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .status-new { background: rgba(0,180,255,0.15); color: #00b4ff; border: 1px solid rgba(0,180,255,0.3); }
+    .status-confirmed { background: rgba(0,230,153,0.15); color: #00e699; border: 1px solid rgba(0,230,153,0.3); }
+    .status-active { background: rgba(255,170,0,0.15); color: #ffaa00; border: 1px solid rgba(255,170,0,0.3); }
+    .status-completed { background: rgba(150,150,150,0.15); color: #bbb; border: 1px solid rgba(150,150,150,0.3); }
+    .status-cancelled { background: rgba(255,50,50,0.15); color: #ff4444; border: 1px solid rgba(255,50,50,0.3); }
+    .status-select { background: #1c1a17; border: 1px solid var(--line); color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-box { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; }
+    .stat-box .num { font-size: 32px; font-family: var(--display); color: #fff; margin: 4px 0 0; }
+    .stat-box .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .form-group label { font-size: 13px; color: var(--muted); }
+    .form-group input, .form-group textarea, .form-group select { padding: 10px 14px; background: #0c0b09; border: 1px solid var(--line); color: #fff; border-radius: 6px; font-family: inherit; font-size: 14px; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #00e699; color: #000; padding: 14px 28px; border-radius: 6px; font-weight: 600; display: none; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+  </style>
 </head>
 <body class="login-body">
-  <div class="login-stage">
+
+  <!-- 1. LOGIN SCREEN -->
+  <div class="login-stage" id="login-stage">
     <section class="login-hero">
-      <img src="{{ url_for('static', filename='images/hero.jpg') }}" alt="">
+      <img src="/static/images/hero.jpg" alt="Sauna">
       <div class="login-hero-copy">
-        <a class="logo" href="{{ url_for('public.home') }}"><span class="logo-mark" aria-hidden="true"></span>SAUNACORE</a>
+        <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span>SAUNACORE</a>
         <div>
           <h2>Deine private Sauna. Geliefert.</h2>
           <p>Wo und wann du willst. Die Verwaltung sitzt hinter dieser Tür.</p>
@@ -22,18 +59,575 @@
       </div>
     </section>
     <div class="login-panel">
-    <form class="login-card" method="post">
-      <p class="eyebrow">Verwaltung</p>
-      <h1>Anmelden</h1>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="next" value="{{ next_path }}">
-      {% if error %}<p class="flash error">{{ error }}</p>{% endif %}
-      <label>E-Mail<input name="email" type="email" autocomplete="username" required></label>
-      <label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>
-      <button class="btn" type="submit">Anmelden</button>
-      {% if hint %}<p class="hint">Lokal: {{ hint }}</p>{% endif %}
-    </form>
+      <form class="login-card" id="admin-login-form">
+        <p class="eyebrow">Verwaltung · Saunacore</p>
+        <h1>Anmelden</h1>
+        <p id="login-error" class="flash error" style="display:none;"></p>
+        <label>E-Mail<input id="login-email" name="email" type="email" autocomplete="username" required value="admin@saunacore.de"></label>
+        <label>Passwort<input id="login-password" name="password" type="password" autocomplete="current-password" required value="SaunaAdmin2026!"></label>
+        <button class="btn" type="submit" id="btn-login">Anmelden</button>
+        <div style="margin-top: 16px; background: rgba(0,230,153,0.06); border: 1px solid rgba(0,230,153,0.2); padding: 12px; border-radius: 6px; font-size: 12px; color: #ccc; line-height: 1.4;">
+          🟢 <strong>Live Cloud-Datenbank:</strong> Turso (rentsite-stanislavzubko)<br>
+          Всі зміни та замовлення синхронізуються безпосередньо з вашою базою.
+        </div>
+      </form>
     </div>
   </div>
+
+  <!-- 2. FULL EXPANDED ADMIN SHELL -->
+  <div class="shell admin-app" id="admin-shell">
+    <aside class="side">
+      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span>SAUNACORE</a>
+      <p class="side-kicker">Verwaltung</p>
+      <nav class="side-nav">
+        <p class="side-label">Betrieb</p>
+        <a class="nav-item is-active" data-view="view-dashboard">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>Überblick
+        </a>
+        <a class="nav-item" data-view="view-bookings">
+          <svg viewBox="0 0 24 24"><path d="M8 7h11M8 12h11M8 17h11"/><circle cx="4.5" cy="7" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="17" r="1"/></svg>Buchungen
+        </a>
+        <a class="nav-item" data-view="view-messages">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>Nachrichten <em id="nav-msg-count" style="margin-left:auto; font-style:normal; font-size:11px; background:var(--orange); color:#fff; padding:2px 6px; border-radius:10px;">0</em>
+        </a>
+        <p class="side-label">Katalog</p>
+        <a class="nav-item" data-view="view-models">
+          <svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4M4 16l8 4 8-4"/></svg>Modelle
+        </a>
+        <a class="nav-item" data-view="view-extras">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Extras
+        </a>
+        <a class="nav-item" data-view="view-zones">
+          <svg viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"/><circle cx="12" cy="11" r="2"/></svg>Lieferzonen
+        </a>
+        <p class="side-label">Website &amp; CMS</p>
+        <a class="nav-item" data-view="view-content">
+          <svg viewBox="0 0 24 24"><path d="M6 4h9l5 5v11H6z"/><path d="M14 4v6h6M8 13h8M8 17h6"/></svg>Inhalte (CMS)
+        </a>
+        <a class="nav-item" data-view="view-settings">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>Einstellungen
+        </a>
+      </nav>
+      <div class="side-foot">
+        <p class="side-status"><span class="turso-dot"></span> Turso Cloud Live</p>
+        <a class="side-out" href="/" target="_blank">Zur Website ↗</a>
+        <button id="btn-logout" style="background:transparent; border:none; color:var(--muted); font-size:13px; cursor:pointer; padding:8px 0; text-align:left;">Abmelden</button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-copy">
+          <p style="margin:0; font-weight:600;">Saunacore Verwaltung</p>
+          <time id="topbar-time" style="font-size:13px; color:var(--muted);"></time>
+        </div>
+        <div class="topbar-actions">
+          <span class="turso-badge"><span class="turso-dot"></span>Turso DB Live</span>
+          <button class="btn btn-sm" onclick="loadData()">Aktualisieren ↻</button>
+        </div>
+      </header>
+
+      <div style="padding: 32px; max-width: 1200px; width: 100%;">
+        
+        <!-- VIEW: DASHBOARD (ÜBERBLICK) -->
+        <div id="view-dashboard" class="view-pane active">
+          <div class="stats-row">
+            <div class="stat-box"><div class="label">Buchungen gesamt</div><div class="num" id="stat-bookings">0</div></div>
+            <div class="stat-box"><div class="label">Aktive Modelle</div><div class="num" id="stat-models">3</div></div>
+            <div class="stat-box"><div class="label">Lieferzonen</div><div class="num" id="stat-zones">3</div></div>
+            <div class="stat-box"><div class="label">Nachrichten</div><div class="num" id="stat-messages">0</div></div>
+          </div>
+          <div class="card-panel">
+            <h2>Letzte Buchungen</h2>
+            <div style="overflow-x: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Bestellnr.</th><th>Kunde</th><th>Modell</th><th>Zeitraum</th><th>Preis</th><th>Status</th><th>Status ändern</th></tr>
+                </thead>
+                <tbody id="dash-bookings-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: BUCHUNGEN (BOOKINGS) -->
+        <div id="view-bookings" class="view-pane">
+          <div class="card-panel">
+            <h2>Alle Buchungen &amp; Termine</h2>
+            <div style="overflow-x: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Bestellnr.</th><th>Kunde &amp; Kontakt</th><th>Lieferort</th><th>Modell</th><th>Zeitraum</th><th>Preis</th><th>Status ändern</th></tr>
+                </thead>
+                <tbody id="all-bookings-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: MODELLE (FLEET) -->
+        <div id="view-models" class="view-pane">
+          <div class="card-panel">
+            <h2>Modelle &amp; Flotte (Preise &amp; Texte in Turso bearbeiten)</h2>
+            <div id="models-container"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: EXTRAS -->
+        <div id="view-extras" class="view-pane">
+          <div class="card-panel">
+            <h2>Extras &amp; Zubehör</h2>
+            <div id="extras-container"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: LIEFERZONEN -->
+        <div id="view-zones" class="view-pane">
+          <div class="card-panel">
+            <h2>Lieferzonen &amp; Gebiets-Tarife</h2>
+            <div id="zones-container"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: NACHRICHTEN -->
+        <div id="view-messages" class="view-pane">
+          <div class="card-panel">
+            <h2>Kontakt-Nachrichten</h2>
+            <div id="messages-container"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: INHALTE (CMS) -->
+        <div id="view-content" class="view-pane">
+          <div class="card-panel">
+            <h2>✍️ Inhalte der Website (Vollwertiges CMS)</h2>
+            <p style="color:var(--muted); font-size:14px; margin-top:-6px; margin-bottom:24px;">Hier steuerst du alle Texte, Kicker, Überschriften und Inhalte der Website. Gespeichert direkt in deiner Turso Cloud-Datenbank.</p>
+            
+            <form id="cms-form">
+              <h3 style="color:var(--orange); font-size:16px; margin: 20px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px;">Startseite &amp; Hero-Bereich</h3>
+              <div class="form-pair">
+                <div class="form-group"><label>Hero Kicker</label><input id="cms-hero_kicker" name="hero_kicker"></div>
+                <div class="form-group"><label>Hero Bild Pfad</label><input id="cms-hero_image" name="hero_image"></div>
+              </div>
+              <div class="form-group"><label>Hero Haupt-Überschrift</label><textarea id="cms-hero_title" name="hero_title" rows="2"></textarea></div>
+              <div class="form-group"><label>Hero Untertitel (Lede)</label><textarea id="cms-hero_lede" name="hero_lede" rows="2"></textarea></div>
+
+              <h3 style="color:var(--orange); font-size:16px; margin: 28px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px;">Flotten-Bereich</h3>
+              <div class="form-pair">
+                <div class="form-group"><label>Flotten-Titel</label><input id="cms-fleet_title" name="fleet_title"></div>
+                <div class="form-group"><label>Flotten-Text</label><textarea id="cms-fleet_text" name="fleet_text" rows="2"></textarea></div>
+              </div>
+
+              <h3 style="color:var(--orange); font-size:16px; margin: 28px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px;">„So funktioniert's“ (3 Schritte)</h3>
+              <div class="form-pair">
+                <div class="form-group"><label>Kicker</label><input id="cms-how_kicker" name="how_kicker"></div>
+                <div class="form-group"><label>Titel</label><input id="cms-how_title" name="how_title"></div>
+              </div>
+              <div class="form-group"><label>Beschreibungstext</label><textarea id="cms-how_lede" name="how_lede" rows="2"></textarea></div>
+
+              <h3 style="color:var(--orange); font-size:16px; margin: 28px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px;">Preise &amp; Kontakt</h3>
+              <div class="form-pair">
+                <div class="form-group"><label>Preise Titel</label><input id="cms-prices_title" name="prices_title"></div>
+                <div class="form-group"><label>Preise Beschreibung</label><textarea id="cms-prices_text" name="prices_text" rows="2"></textarea></div>
+              </div>
+
+              <div style="margin-top: 24px;">
+                <button type="submit" class="btn" style="padding: 12px 32px; font-size: 15px;">Alle Inhalte in Turso speichern</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- VIEW: EINSTELLUNGEN (SETTINGS) -->
+        <div id="view-settings" class="view-pane">
+          <div class="card-panel">
+            <h2>⚙️ Unternehmens-Einstellungen &amp; Steuer</h2>
+            <form id="settings-form">
+              <div class="form-pair">
+                <div class="form-group"><label>Firmenname</label><input id="set-company_name"></div>
+                <div class="form-group"><label>Inhaber / Vertreten durch</label><input id="set-owner_name"></div>
+              </div>
+              <div class="form-pair">
+                <div class="form-group"><label>Offizielle E-Mail</label><input id="set-email" type="email"></div>
+                <div class="form-group"><label>Telefonnummer</label><input id="set-phone"></div>
+              </div>
+              <div class="form-pair">
+                <div class="form-group"><label>Straße &amp; Hausnr.</label><input id="set-street"></div>
+                <div class="form-group"><label>PLZ &amp; Stadt</label><input id="set-city"></div>
+              </div>
+              <div class="form-pair">
+                <div class="form-group"><label>MwSt. Satz (%)</label><input id="set-vat_percent" type="number"></div>
+                <div class="form-group"><label>USt-IdNr.</label><input id="set-vat_id"></div>
+              </div>
+              <div style="margin-top: 24px;">
+                <button type="submit" class="btn" style="padding: 12px 32px;">Einstellungen in Turso speichern</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Erfolgreich in Turso gespeichert!</div>
+
+  <script>
+    let token = localStorage.getItem('saunacore_turso_token');
+    let currentData = null;
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg || 'Erfolgreich in Turso gespeichert!';
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3000);
+    }
+
+    // Topbar clock
+    const clockEl = document.getElementById('topbar-time');
+    if (clockEl) {
+      clockEl.textContent = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+    }
+
+    // Check auth
+    if (token) {
+      openAdminShell();
+    }
+
+    // Login Form Submit
+    document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('btn-login');
+      const err = document.getElementById('login-error');
+
+      btn.disabled = true;
+      btn.textContent = 'Verbinde mit Turso...';
+      err.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          err.textContent = data.error || 'Anmeldung fehlgeschlagen.';
+          err.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Anmelden';
+          return;
+        }
+
+        token = data.token;
+        localStorage.setItem('saunacore_turso_token', token);
+        openAdminShell();
+      } catch (e) {
+        err.textContent = 'Verbindungsfehler: ' + e.message;
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Anmelden';
+      }
+    });
+
+    // Logout
+    document.getElementById('btn-logout').addEventListener('click', () => {
+      localStorage.removeItem('saunacore_turso_token');
+      token = null;
+      document.getElementById('admin-shell').style.display = 'none';
+      document.getElementById('login-stage').style.display = 'flex';
+      document.body.className = 'login-body';
+    });
+
+    function openAdminShell() {
+      document.getElementById('login-stage').style.display = 'none';
+      document.getElementById('admin-shell').style.display = 'flex';
+      document.body.className = '';
+      loadData();
+    }
+
+    // Nav Switcher
+    document.querySelectorAll('.side-nav a').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.side-nav a').forEach(item => item.classList.remove('is-active'));
+        document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
+        a.classList.add('is-active');
+        const targetView = document.getElementById(a.dataset.view);
+        if (targetView) targetView.classList.add('active');
+      });
+    });
+
+    // Load All Data from Turso
+    async function loadData() {
+      try {
+        const res = await fetch('/api/admin/data', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.status === 401) {
+          localStorage.removeItem('saunacore_turso_token');
+          location.reload();
+          return;
+        }
+        currentData = await res.json();
+        if (!currentData.ok) return;
+
+        // Stats
+        document.getElementById('stat-bookings').textContent = currentData.bookings.length;
+        document.getElementById('stat-models').textContent = currentData.models.length;
+        document.getElementById('stat-zones').textContent = currentData.zones.length;
+        document.getElementById('stat-messages').textContent = currentData.messages.length;
+        document.getElementById('nav-msg-count').textContent = currentData.messages.length;
+
+        renderBookings(currentData.bookings);
+        renderModels(currentData.models);
+        renderExtras(currentData.extras || []);
+        renderZones(currentData.zones || []);
+        renderMessages(currentData.messages || []);
+        populateCMS(currentData.settings || {});
+        populateSettings(currentData.settings || {});
+      } catch (err) {
+        console.error('Data load error:', err);
+      }
+    }
+
+    // Render Bookings
+    function renderBookings(list) {
+      const labels = { new: 'Neu', confirmed: 'Bestätigt', delivery: 'Unterwegs', active: 'Vermietet', completed: 'Abgeschlossen', cancelled: 'Storniert' };
+      const dashHtml = (!list || list.length === 0) ? '<tr><td colspan="7" style="padding:24px; color:var(--muted); text-align:center;">Noch keine Buchungen vorhanden.</td></tr>' :
+        list.slice(0, 8).map(b => `
+          <tr>
+            <td><strong>${b.number}</strong></td>
+            <td>${b.first_name} ${b.last_name}<br><small style="color:var(--muted);">${b.email}</small></td>
+            <td>${b.model_name || 'Sauna'}</td>
+            <td>${b.start_date} bis ${b.end_date}</td>
+            <td><strong>${(b.gross_cents / 100).toFixed(2).replace('.', ',')} €</strong></td>
+            <td><span class="status-badge status-${b.status}">${labels[b.status] || b.status}</span></td>
+            <td>
+              <select class="status-select" onchange="updateStatus(${b.id}, this.value)">
+                ${['new', 'confirmed', 'delivery', 'active', 'completed', 'cancelled'].map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${labels[s]}</option>`).join('')}
+              </select>
+            </td>
+          </tr>
+        `).join('');
+      document.getElementById('dash-bookings-tbody').innerHTML = dashHtml;
+
+      const allHtml = (!list || list.length === 0) ? '<tr><td colspan="7" style="padding:24px; color:var(--muted); text-align:center;">Noch keine Buchungen vorhanden.</td></tr>' :
+        list.map(b => `
+          <tr>
+            <td><strong>${b.number}</strong></td>
+            <td>${b.first_name} ${b.last_name}<br><small style="color:var(--muted);">${b.email} · ${b.phone || ''}</small></td>
+            <td>${b.address || ''}, ${b.city || ''}</td>
+            <td>${b.model_name || 'Sauna'}</td>
+            <td>${b.start_date} bis ${b.end_date}<br><small style="color:var(--muted);">${b.nights} Nächte</small></td>
+            <td><strong>${(b.gross_cents / 100).toFixed(2).replace('.', ',')} €</strong></td>
+            <td>
+              <select class="status-select" onchange="updateStatus(${b.id}, this.value)">
+                ${['new', 'confirmed', 'delivery', 'active', 'completed', 'cancelled'].map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${labels[s]}</option>`).join('')}
+              </select>
+            </td>
+          </tr>
+        `).join('');
+      document.getElementById('all-bookings-tbody').innerHTML = allHtml;
+    }
+
+    async function updateStatus(id, newStatus) {
+      const res = await fetch('/api/admin/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ id, status: newStatus })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Buchungsstatus in Turso aktualisiert!');
+        loadData();
+      }
+    }
+
+    // Render Models
+    function renderModels(models) {
+      document.getElementById('models-container').innerHTML = models.map(m => {
+        const img = (JSON.parse(m.images_json || '[]')[0]) || '/static/images/model-x.jpg';
+        return `
+          <div style="background:#0e0d0c; border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:16px;">
+            <div style="display:flex; gap:20px; align-items:flex-start;">
+              <img src="${img}" style="width:120px; height:85px; object-fit:cover; border-radius:6px;">
+              <div style="flex:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <h3 style="margin:0; font-size:20px; color:#fff;">${m.name}</h3>
+                  <div>
+                    <span style="font-size:13px; color:var(--muted);">Tagessatz (€): </span>
+                    <input type="number" id="m-price-${m.id}" value="${(m.price_cents/100).toFixed(0)}" style="width:90px; padding:6px; background:#1c1a17; border:1px solid var(--line); color:#fff; border-radius:4px; font-weight:bold;">
+                  </div>
+                </div>
+                <div class="form-pair" style="margin-top:12px;">
+                  <div class="form-group"><label>Untertitel</label><input id="m-sub-${m.id}" value="${m.subtitle || ''}"></div>
+                  <div class="form-group"><label>Badge (z.B. Bestseller)</label><input id="m-badge-${m.id}" value="${m.badge || ''}"></div>
+                </div>
+                <div class="form-group"><label>Kurzbeschreibung</label><textarea id="m-summary-${m.id}" rows="2">${m.summary || ''}</textarea></div>
+                <div style="text-align:right;">
+                  <button class="btn btn-sm" onclick="saveModel(${m.id})">Änderungen in Turso speichern</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function saveModel(id) {
+      const payload = {
+        id,
+        price_cents: Math.round(parseFloat(document.getElementById(`m-price-${id}`).value) * 100),
+        subtitle: document.getElementById(`m-sub-${id}`).value,
+        badge: document.getElementById(`m-badge-${id}`).value,
+        summary: document.getElementById(`m-summary-${id}`).value,
+      };
+      const res = await fetch('/api/admin/model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ model: payload })
+      });
+      const data = await res.json();
+      if (data.ok) showToast('Modell in Turso gespeichert!');
+    }
+
+    // Render Extras
+    function renderExtras(extras) {
+      document.getElementById('extras-container').innerHTML = extras.map(ex => `
+        <div style="background:#0e0d0c; border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong style="font-size:16px; color:#fff;">${ex.name}</strong>
+            <p style="margin:4px 0 0; color:var(--muted); font-size:13px;">${ex.description}</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <input type="number" id="ex-price-${ex.id}" value="${(ex.price_cents/100).toFixed(0)}" style="width:80px; padding:6px; background:#1c1a17; border:1px solid var(--line); color:#fff; border-radius:4px;"> €
+            <button class="btn btn-sm" onclick="saveExtra(${ex.id})">Speichern</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function saveExtra(id) {
+      const priceCents = Math.round(parseFloat(document.getElementById(`ex-price-${id}`).value) * 100);
+      const res = await fetch('/api/admin/extra', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ extra: { id, price_cents: priceCents } })
+      });
+      const data = await res.json();
+      if (data.ok) showToast('Extra in Turso gespeichert!');
+    }
+
+    // Render Zones
+    function renderZones(zones) {
+      document.getElementById('zones-container').innerHTML = zones.map(z => `
+        <div style="background:#0e0d0c; border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong style="font-size:16px; color:#fff;">${z.name}</strong>
+            <p style="margin:4px 0 0; color:var(--muted); font-size:13px;">${z.note} (${z.cities || 'Alle Städte'})</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span>Pauschalpreis:</span>
+            <input type="number" id="z-price-${z.id}" value="${(z.price_cents/100).toFixed(0)}" style="width:80px; padding:6px; background:#1c1a17; border:1px solid var(--line); color:#fff; border-radius:4px;"> €
+            <button class="btn btn-sm" onclick="saveZone(${z.id})">Speichern</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function saveZone(id) {
+      const priceCents = Math.round(parseFloat(document.getElementById(`z-price-${id}`).value) * 100);
+      const res = await fetch('/api/admin/zone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ zone: { id, price_cents: priceCents } })
+      });
+      const data = await res.json();
+      if (data.ok) showToast('Lieferzone in Turso gespeichert!');
+    }
+
+    // Render Messages
+    function renderMessages(messages) {
+      const container = document.getElementById('messages-container');
+      if (!messages || messages.length === 0) {
+        container.innerHTML = '<p style="color:var(--muted); padding:16px 0;">Keine neuen Nachrichten vorhanden.</p>';
+        return;
+      }
+      container.innerHTML = messages.map(m => `
+        <div style="background:#0e0d0c; border:1px solid var(--line); border-radius:8px; padding:18px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <strong>${m.name} (${m.email} · ${m.phone || ''})</strong>
+            <small style="color:var(--muted);">${m.created_at}</small>
+          </div>
+          <p style="margin:0; color:#ddd; font-size:14px; line-height:1.5;">${m.body}</p>
+        </div>
+      `).join('');
+    }
+
+    // CMS Form Populate
+    function populateCMS(s) {
+      const fields = ['hero_kicker', 'hero_image', 'hero_title', 'hero_lede', 'fleet_title', 'fleet_text', 'how_kicker', 'how_title', 'how_lede', 'prices_title', 'prices_text'];
+      fields.forEach(f => {
+        const el = document.getElementById('cms-' + f);
+        if (el && s[f] !== undefined) el.value = s[f];
+      });
+    }
+
+    // CMS Form Submit
+    document.getElementById('cms-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fields = ['hero_kicker', 'hero_image', 'hero_title', 'hero_lede', 'fleet_title', 'fleet_text', 'how_kicker', 'how_title', 'how_lede', 'prices_title', 'prices_text'];
+      const payload = {};
+      fields.forEach(f => {
+        const el = document.getElementById('cms-' + f);
+        if (el) payload[f] = el.value;
+      });
+
+      const res = await fetch('/api/admin/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ content: payload })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('CMS-Inhalte erfolgreich in Turso gespeichert!');
+      } else {
+        alert('Fehler beim Speichern: ' + (data.error || ''));
+      }
+    });
+
+    // Settings Populate
+    function populateSettings(s) {
+      const keys = ['company_name', 'owner_name', 'email', 'phone', 'street', 'city', 'vat_percent', 'vat_id'];
+      keys.forEach(k => {
+        const el = document.getElementById('set-' + k);
+        if (el && s[k] !== undefined) el.value = s[k];
+      });
+    }
+
+    // Settings Submit
+    document.getElementById('settings-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const keys = ['company_name', 'owner_name', 'email', 'phone', 'street', 'city', 'vat_percent', 'vat_id'];
+      const payload = {};
+      keys.forEach(k => {
+        const el = document.getElementById('set-' + k);
+        if (el) payload[k] = el.value;
+      });
+
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ settings: payload })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Einstellungen erfolgreich in Turso gespeichert!');
+      }
+    });
+  </script>
 </body>
 </html>
