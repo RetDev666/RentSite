@@ -59,6 +59,17 @@ def main():
         else:
             print(f"  [FAIL {res.status_code}] {path}")
 
+    # Export admin login page for /admin and /admin/login
+    res_admin = client.get("/admin/login")
+    if res_admin.status_code == 200:
+        for rel_dest in ["admin/index.html", "admin/login/index.html"]:
+            dest = public_dir / rel_dest
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(res_admin.data)
+            print(f"  [OK 200] /admin/login -> {rel_dest}")
+    else:
+        print(f"  [FAIL {res_admin.status_code}] /admin/login")
+
     # Generate 404.html
     res_404 = client.get("/trigger-404-for-export")
     (public_dir / "404.html").write_bytes(res_404.data)

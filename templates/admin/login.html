@@ -22,17 +22,33 @@
       </div>
     </section>
     <div class="login-panel">
-    <form class="login-card" method="post">
+    <form class="login-card" method="post" id="admin-login-form">
       <p class="eyebrow">Verwaltung</p>
       <h1>Anmelden</h1>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="next" value="{{ next_path }}">
       {% if error %}<p class="flash error">{{ error }}</p>{% endif %}
-      <label>E-Mail<input name="email" type="email" autocomplete="username" required></label>
-      <label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>
+      <label>E-Mail<input name="email" type="email" autocomplete="username" required value="admin@saunacore.de"></label>
+      <label>Passwort<input name="password" type="password" autocomplete="current-password" required value="SaunaAdmin2026!"></label>
       <button class="btn" type="submit">Anmelden</button>
+      <p id="netlify-notice" class="hint" style="display:none; margin-top:14px; background:rgba(255,255,255,0.06); padding:10px; border-radius:6px; color:#e0e0e0; font-size:13px; line-height:1.4;">
+        ℹ️ Ви переглядаєте сайт на Netlify (статичний CDN). Щоб адмін-панель керувала замовленнями в базі SQLite, розгорніть повноцінний Python-сервер на <strong>Render.com</strong> (інструкція в DEPLOY.md).
+      </p>
       {% if hint %}<p class="hint">Lokal: {{ hint }}</p>{% endif %}
     </form>
+    <script>
+      if (window.location.hostname.includes("netlify.app")) {
+        var notice = document.getElementById("netlify-notice");
+        if (notice) notice.style.display = "block";
+        var form = document.getElementById("admin-login-form");
+        if (form) {
+          form.addEventListener("submit", function(e) {
+            e.preventDefault();
+            alert("Адмін-панель вимагає живого Python-сервера для авторизації сесій та бази даних SQLite.\n\nЗапустіть застосунок на Render.com (безкоштовно через GitHub) за покроковою інструкцією в DEPLOY.md.");
+          });
+        }
+      }
+    </script>
     </div>
   </div>
 </body>
