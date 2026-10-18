@@ -81,6 +81,7 @@
         window.setTimeout(next, 180);
         gallery.querySelectorAll(".thumbs button").forEach((item) => item.classList.remove("is-active"));
         button.classList.add("is-active");
+        button.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
       });
     });
   });
