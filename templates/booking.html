@@ -76,7 +76,7 @@
         <p class="prose">Vervollständigen Sie Ihr Sauna-Erlebnis mit unseren Zusatzleistungen. Materialien und Services für maximale Entspannung.</p>
         <div class="extra-grid">
           {% for extra in extras %}
-          <article class="extra-card" data-extra-id="{{ extra.id }}" data-kind="{{ extra.kind }}">
+          <article class="extra-card" data-extra-id="{{ extra.id }}" data-slug="{{ extra.slug }}" data-kind="{{ extra.kind }}">
             <div class="extra-photo">
               {% if extra.image %}<img src="{{ extra.image }}" alt="{{ extra.name }}" loading="lazy" decoding="async">{% else %}<span class="broom">{{ icon('spark') }}</span>{% endif %}
               <span class="badge">{{ kind_labels[extra.kind] }}</span>
@@ -221,5 +221,5 @@
 <script id="booking-boot" type="application/json">{{ boot|tojson }}</script>
 {% endblock %}
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/booking.js') }}?v=3" defer></script>
+<script src="{{ url_for('static', filename='js/booking.js') }}?v=4" defer></script>
 {% endblock %}

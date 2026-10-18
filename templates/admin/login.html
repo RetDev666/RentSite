@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/admin.css?v=15">
   <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v=4">
+  <link rel="stylesheet" href="/static/css/map.css?v=5">
   <script src="/static/vendor/leaflet/leaflet.js?v=4"></script>
   <style>
     /* Full Width & Screen Span Fix */
@@ -24,6 +25,24 @@
     }
     *, *::before, *::after {
       box-sizing: border-box;
+    }
+
+    /* Leaflet tile & container reset */
+    .leaflet-container, .leaflet-container * {
+      box-sizing: content-box !important;
+    }
+    .leaflet-container img, .leaflet-container canvas {
+      max-width: none !important;
+      max-height: none !important;
+    }
+    .leaflet-container img.leaflet-tile {
+      mix-blend-mode: normal !important;
+    }
+    #spa-bookings-map {
+      width: 100% !important;
+      height: 380px !important;
+      background: #0c0b09;
+      border-radius: 0 0 8px 8px;
     }
 
     #admin-shell {
@@ -528,8 +547,13 @@
         <!-- 4. VIEW: EXTRAS -->
         <div id="view-extras" class="view-pane">
           <div class="card-panel">
-            <h2>Extras &amp; Zubehör</h2>
-            <p style="color:#a39890; font-size:14px; margin-top:-6px; margin-bottom:20px;">Preise und Bezeichnungen des zubuchbaren Equipments.</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h2 style="margin:0;">Extras &amp; Zusatzleistungen</h2>
+                <p style="color:#a39890; font-size:14px; margin:4px 0 0;">Verwalte zubuchbare Ausstattungen, Preise, Beschreibungen und Fotos (werden live im Buchungsprozess angezeigt).</p>
+              </div>
+              <button class="btn btn-sm" onclick="addNewExtra()">+ Neues Extra anlegen</button>
+            </div>
             <div id="extras-container"></div>
           </div>
         </div>
@@ -838,6 +862,20 @@
         const targetView = document.getElementById(a.dataset.view);
         if (targetView) targetView.classList.add('active');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        if (a.dataset.view === 'view-bookings') {
+          setTimeout(() => {
+            if (spaMapInstance) {
+              spaMapInstance.invalidateSize();
+              if (window.spaMapBounds && window.spaMapBounds.isValid()) {
+                spaMapInstance.fitBounds(window.spaMapBounds, { padding: [40, 40], maxZoom: 13 });
+              }
+            }
+          }, 80);
+          setTimeout(() => {
+            if (spaMapInstance) spaMapInstance.invalidateSize();
+          }, 350);
+        }
       });
     });
 
@@ -935,7 +973,24 @@
             <strong>${(b.gross_cents / 100).toFixed(2).replace('.', ',')} €</strong>
           `);
       });
-      setTimeout(() => { if (spaMapInstance) spaMapInstance.invalidateSize(); }, 150);
+
+      window.spaMapBounds = bounds;
+      if (bounds.isValid()) {
+        try {
+          spaMapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+        } catch (_e) {}
+      }
+
+      setTimeout(() => { if (spaMapInstance) spaMapInstance.invalidateSize(); }, 100);
+      setTimeout(() => { if (spaMapInstance) spaMapInstance.invalidateSize(); }, 350);
+      setTimeout(() => { if (spaMapInstance) spaMapInstance.invalidateSize(); }, 700);
+
+      if (!window._spaMapResizeAttached) {
+        window._spaMapResizeAttached = true;
+        window.addEventListener('resize', () => {
+          if (spaMapInstance) spaMapInstance.invalidateSize();
+        });
+      }
     }
 
     // Render Bookings
@@ -1084,31 +1139,193 @@
       if (data.ok) showToast('Modell erfolgreich in Turso gespeichert!');
     }
 
-    // Render Extras
+    // Render Extras with photo upload & preview
     function renderExtras(extras) {
-      document.getElementById('extras-container').innerHTML = extras.map(ex => `
-        <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:8px; padding:18px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <strong style="font-size:16px; color:#fff;">${ex.name}</strong>
-            <p style="margin:4px 0 0; color:#a39890; font-size:13px;">${ex.description}</p>
+      if (!extras || extras.length === 0) {
+        document.getElementById('extras-container').innerHTML = '<p style="color:#a39890; text-align:center; padding:20px;">Keine Extras vorhanden.</p>';
+        return;
+      }
+      document.getElementById('extras-container').innerHTML = extras.map(ex => {
+        const hasImg = !!(ex.image && ex.image.trim());
+        return `
+          <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:10px; padding:20px; margin-bottom:16px;">
+            <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+              <!-- Photo preview & picker -->
+              <div style="width:140px; min-width:140px; display:flex; flex-direction:column; gap:8px;">
+                <div id="ex-img-preview-wrap-${ex.id}" style="width:140px; height:100px; border-radius:8px; overflow:hidden; background:#1c1a17; border:1px solid rgba(255,244,230,0.12); display:flex; align-items:center; justify-content:center; position:relative;">
+                  ${hasImg ? `<img id="ex-img-preview-${ex.id}" src="${ex.image}" style="width:100%; height:100%; object-fit:cover;">` : `<span id="ex-img-empty-${ex.id}" style="color:#a39890; font-size:11px; text-align:center; padding:6px;">Kein Foto</span>`}
+                </div>
+                <input type="file" id="ex-file-${ex.id}" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleExtraImageUpload(${ex.id}, this)">
+                <button type="button" class="btn btn-sm ghost" onclick="document.getElementById('ex-file-${ex.id}').click()" style="padding:6px 8px; font-size:11px; width:100%; text-align:center;">📷 Foto wählen</button>
+                ${hasImg ? `<button type="button" onclick="removeExtraImage(${ex.id})" style="background:transparent; border:none; color:#ef4444; font-size:11px; padding:2px; cursor:pointer; text-align:center;">Foto entfernen</button>` : ''}
+                <input type="hidden" id="ex-img-${ex.id}" value="${ex.image || ''}">
+              </div>
+
+              <!-- Extra form fields -->
+              <div style="flex:1; min-width:280px; display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                  <div class="form-group" style="flex:2; min-width:180px;">
+                    <label>Bezeichnung</label>
+                    <input id="ex-name-${ex.id}" value="${ex.name || ''}" style="padding:8px 10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:600;">
+                  </div>
+                  <div class="form-group" style="flex:1; min-width:140px;">
+                    <label>Art</label>
+                    <select id="ex-kind-${ex.id}" style="padding:8px 10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px;">
+                      <option value="kauf" ${ex.kind === 'kauf' ? 'selected' : ''}>Kaufartikel / Zubehör</option>
+                      <option value="service" ${ex.kind === 'service' ? 'selected' : ''}>Service / Reinigung</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="width:110px;">
+                    <label>Preis (€)</label>
+                    <input type="number" id="ex-price-${ex.id}" value="${(ex.price_cents/100).toFixed(0)}" style="padding:8px 10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:bold; font-size:15px;">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Beschreibung (auf Website und Rechnung)</label>
+                  <textarea id="ex-desc-${ex.id}" rows="2" style="padding:8px 10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px;">${ex.description || ''}</textarea>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#a39890;">
+                  <span>Foto-Pfad / URL:</span>
+                  <input type="text" id="ex-img-path-${ex.id}" value="${ex.image || ''}" placeholder="/static/images/... oder data:image/..." oninput="updateExtraImageFromInput(${ex.id}, this.value)" style="flex:1; padding:4px 8px; font-size:12px; background:#141311; border:1px solid rgba(255,244,230,0.1); border-radius:4px; color:#ddd;">
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; flex-wrap:wrap; gap:10px;">
+                  <label style="font-size:13px; color:#a39890; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" id="ex-active-${ex.id}" ${ex.active !== 0 ? 'checked' : ''}> Aktiv im Buchungsprozess
+                  </label>
+                  <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="btn btn-sm" onclick="saveExtra(${ex.id})">Änderungen speichern</button>
+                    <button type="button" onclick="deleteExtra(${ex.id})" style="background:transparent; border:none; color:#ef4444; font-size:12px; cursor:pointer;" title="Extra löschen">✕ Löschen</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <input type="number" id="ex-price-${ex.id}" value="${(ex.price_cents/100).toFixed(0)}" style="width:85px; padding:7px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:bold;"> €
-            <button class="btn btn-sm" onclick="saveExtra(${ex.id})">Speichern</button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+    }
+
+    function handleExtraImageUpload(id, input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxW = 800;
+          const maxH = 600;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxW || h > maxH) {
+            if (w / maxW > h / maxH) {
+              h = Math.round((h * maxW) / w);
+              w = maxW;
+            } else {
+              w = Math.round((w * maxH) / h);
+              h = maxH;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+          document.getElementById(`ex-img-${id}`).value = dataUrl;
+          document.getElementById(`ex-img-path-${id}`).value = dataUrl.slice(0, 45) + '... (Eigenes Foto)';
+          const previewWrap = document.getElementById(`ex-img-preview-wrap-${id}`);
+          previewWrap.innerHTML = `<img id="ex-img-preview-${id}" src="${dataUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+          showToast('Foto ausgewählt! Klicke auf "Änderungen speichern", um es in Turso zu speichern.');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeExtraImage(id) {
+      document.getElementById(`ex-img-${id}`).value = '';
+      document.getElementById(`ex-img-path-${id}`).value = '';
+      const previewWrap = document.getElementById(`ex-img-preview-wrap-${id}`);
+      previewWrap.innerHTML = `<span id="ex-img-empty-${id}" style="color:#a39890; font-size:11px; text-align:center; padding:6px;">Kein Foto</span>`;
+      showToast('Foto entfernt. Klicke auf "Änderungen speichern".');
+    }
+
+    function updateExtraImageFromInput(id, val) {
+      val = val.trim();
+      document.getElementById(`ex-img-${id}`).value = val;
+      const previewWrap = document.getElementById(`ex-img-preview-wrap-${id}`);
+      if (val) {
+        previewWrap.innerHTML = `<img id="ex-img-preview-${id}" src="${val}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">`;
+      } else {
+        previewWrap.innerHTML = `<span id="ex-img-empty-${id}" style="color:#a39890; font-size:11px; text-align:center; padding:6px;">Kein Foto</span>`;
+      }
     }
 
     async function saveExtra(id) {
-      const priceCents = Math.round(parseFloat(document.getElementById(`ex-price-${id}`).value) * 100);
+      const name = document.getElementById(`ex-name-${id}`).value.trim();
+      const description = document.getElementById(`ex-desc-${id}`).value.trim();
+      const priceCents = Math.round(parseFloat(document.getElementById(`ex-price-${id}`).value || 0) * 100);
+      const kind = document.getElementById(`ex-kind-${id}`).value;
+      const image = document.getElementById(`ex-img-${id}`).value.trim();
+      const active = document.getElementById(`ex-active-${id}`).checked ? 1 : 0;
+
+      const payload = {
+        id,
+        name,
+        description,
+        price_cents: priceCents,
+        kind,
+        image,
+        active
+      };
+
       const res = await fetch('/api/admin/extra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ extra: { id, price_cents: priceCents } })
+        body: JSON.stringify({ extra: payload })
       });
       const data = await res.json();
-      if (data.ok) showToast('Extra in Turso gespeichert!');
+      if (data.ok) {
+        showToast(`Extra "${name}" erfolgreich in Turso gespeichert!`);
+        if (currentData && currentData.extras) {
+          const item = currentData.extras.find(x => x.id === id);
+          if (item) Object.assign(item, payload);
+        }
+      } else {
+        showToast('Fehler beim Speichern: ' + (data.error || 'Unbekannt'), true);
+      }
+    }
+
+    async function addNewExtra() {
+      const name = prompt('Name des neuen Extras:');
+      if (!name || !name.trim()) return;
+      const res = await fetch('/api/admin/extra', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ extra: { name: name.trim(), price_cents: 1000, kind: 'kauf', active: 1, image: '' } })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Neues Extra "${name}" angelegt!`);
+        loadData();
+      }
+    }
+
+    async function deleteExtra(id) {
+      if (!confirm('Dieses Extra wirklich unwiderruflich löschen?')) return;
+      const res = await fetch('/api/admin/extra/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Extra gelöscht!');
+        loadData();
+      }
     }
 
     // Render Zones

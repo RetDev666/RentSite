@@ -620,6 +620,69 @@
     });
   });
 
+  async function syncLiveExtras() {
+    try {
+      const res = await fetch("/api/extras");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.extras)) return;
+
+      data.extras.forEach((ex) => {
+        // Find in boot.extras by slug or id
+        const found = boot.extras.find((b) => (b.slug && b.slug === ex.slug) || Number(b.id) === Number(ex.id));
+        if (found) {
+          found.price_cents = Number(ex.price_cents);
+          found.price = (Number(ex.price_cents) / 100).toFixed(2).replace(".", ",") + " €";
+          found.name = ex.name;
+          found.image = ex.image;
+          found.kind = ex.kind;
+        }
+
+        // Find card by data-slug or data-extra-id
+        const card = document.querySelector(`.extra-card[data-slug="${ex.slug}"]`) ||
+                     document.querySelector(`.extra-card[data-extra-id="${ex.id}"]`);
+        if (card) {
+          const photoWrap = card.querySelector(".extra-photo");
+          if (photoWrap) {
+            let img = photoWrap.querySelector("img");
+            if (ex.image) {
+              if (!img) {
+                const broom = photoWrap.querySelector(".broom");
+                if (broom) broom.remove();
+                img = document.createElement("img");
+                img.loading = "lazy";
+                img.decoding = "async";
+                photoWrap.prepend(img);
+              }
+              img.src = ex.image;
+              img.alt = ex.name || "";
+            } else if (img) {
+              img.remove();
+              if (!photoWrap.querySelector(".broom")) {
+                const broom = document.createElement("span");
+                broom.className = "broom";
+                broom.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>';
+                photoWrap.prepend(broom);
+              }
+            }
+          }
+
+          const title = card.querySelector("h3");
+          if (title && ex.name) title.textContent = ex.name;
+
+          const priceEl = card.querySelector(".plus-price");
+          if (priceEl && ex.price_cents !== undefined) {
+            priceEl.textContent = "+ " + (Number(ex.price_cents) / 100).toFixed(2).replace(".", ",") + " €";
+          }
+
+          const desc = card.querySelector("p");
+          if (desc && ex.description) desc.textContent = ex.description;
+        }
+      });
+    } catch (_e) {}
+  }
+
+  syncLiveExtras();
   loadBusy().then(() => {
     if (state.start && state.end) scheduleQuote();
   });

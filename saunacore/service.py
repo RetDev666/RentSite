@@ -1265,6 +1265,7 @@ def safe_image_path(path: str) -> bool:
         or p.startswith("/static/uploads/")
         or p.startswith("http://")
         or p.startswith("https://")
+        or p.startswith("data:image/")
         or (p.startswith("/static/") and any(p.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp", ".svg")))
     )
 

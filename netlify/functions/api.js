@@ -250,6 +250,16 @@ exports.handler = async (event) => {
           redirect: `/buchung/finden?success=1&number=${number}`,
         }),
       };
+    // -------------------------------------------------------------
+    // GET /api/extras - Return all active extras
+    // -------------------------------------------------------------
+    if (path === 'extras' || path.startsWith('extras')) {
+      const res = await db.execute(`SELECT * FROM extras WHERE active = 1 ORDER BY sort_order, id`);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ ok: true, extras: res.rows }),
+      };
     }
 
     // -------------------------------------------------------------
@@ -394,7 +404,7 @@ exports.handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
       }
 
-      // POST /api/admin/extra - Update extra
+      // POST /api/admin/extra - Create or update extra
       if (path === 'admin/extra') {
         let body = {};
         try {
@@ -403,8 +413,43 @@ exports.handler = async (event) => {
         const ex = body.extra || {};
         if (ex.id) {
           await db.execute({
-            sql: `UPDATE extras SET name = ?, description = ?, price_cents = ? WHERE id = ?`,
-            args: [ex.name || '', ex.description || '', Number(ex.price_cents) || 0, Number(ex.id)],
+            sql: `UPDATE extras SET name = ?, description = ?, price_cents = ?, kind = ?, image = ?, active = ? WHERE id = ?`,
+            args: [
+              ex.name || '',
+              ex.description || '',
+              Number(ex.price_cents) || 0,
+              ex.kind || 'kauf',
+              ex.image !== undefined ? String(ex.image) : '',
+              ex.active !== undefined ? (ex.active ? 1 : 0) : 1,
+              Number(ex.id),
+            ],
+          });
+        } else if (ex.name) {
+          const slug = (ex.name || 'extra').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36);
+          await db.execute({
+            sql: `INSERT INTO extras (slug, name, description, price_cents, kind, image, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, 9)`,
+            args: [
+              slug,
+              ex.name || '',
+              ex.description || '',
+              Number(ex.price_cents) || 0,
+              ex.kind || 'kauf',
+              ex.image || '',
+              ex.active !== undefined ? (ex.active ? 1 : 0) : 1
+            ],
+          });
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
+
+      // POST /api/admin/extra/delete - Delete extra
+      if (path === 'admin/extra/delete') {
+        let body = {};
+        try { body = JSON.parse(event.body || '{}'); } catch (_e) {}
+        if (body.id) {
+          await db.execute({
+            sql: `DELETE FROM extras WHERE id = ?`,
+            args: [Number(body.id)]
           });
         }
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };

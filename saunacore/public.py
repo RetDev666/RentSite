@@ -262,8 +262,10 @@ def booking(slug):
         "extras": [
             {
                 "id": item["id"],
+                "slug": item.get("slug", ""),
                 "name": item["name"],
                 "kind": item["kind"],
+                "image": item.get("image", ""),
                 "price_cents": item["price_cents"],
                 "price": service.format_euro(item["price_cents"]),
             }
