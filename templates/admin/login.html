@@ -8,6 +8,8 @@
   <link rel="icon" href="/static/favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/admin.css?v=15">
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v=4">
+  <script src="/static/vendor/leaflet/leaflet.js?v=4"></script>
   <style>
     /* Full Width & Screen Span Fix */
     html, body {
@@ -385,9 +387,12 @@
       </div>
     </section>
     <div class="login-panel">
-      <form class="login-card" id="admin-login-form">
+      <form class="login-card" id="admin-login-form" method="post" action="{{ url_for('admin.login') if url_for else '/admin/login' }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ next_path or '' }}">
         <p class="eyebrow">Verwaltung · Saunacore</p>
         <h1>Anmelden</h1>
+        {% if error %}<p class="flash error" style="display:block;">{{ error }}</p>{% endif %}
         <p id="login-error" class="flash error" style="display:none;"></p>
         <label>E-Mail<input id="login-email" name="email" type="email" autocomplete="username" required value="admin@saunacore.de"></label>
         <label>Passwort<input id="login-password" name="password" type="password" autocomplete="current-password" required value="SaunaAdmin2026!"></label>
@@ -478,15 +483,32 @@
 
         <!-- 2. VIEW: BUCHUNGEN (BOOKINGS) -->
         <div id="view-bookings" class="view-pane">
+          <div class="card-panel" style="padding:0; overflow:hidden; margin-bottom:20px;">
+            <div style="padding:14px 20px; background:#141311; border-bottom:1px solid rgba(255,244,230,0.08); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <h3 style="margin:0; font-size:16px; color:#fff;">Auftrags- &amp; Lieferkarte</h3>
+              <div style="font-size:12px; color:#a39890; display:flex; gap:14px; align-items:center;">
+                <span><strong style="color:#f59e0b;">★</strong> Station Treuenbrietzen</span>
+                <span><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#2563eb;"></span> 🚚 Lieferung</span>
+                <span><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#8b5cf6;"></span> 🏪 Selbstabholung</span>
+              </div>
+            </div>
+            <div id="spa-bookings-map" style="width:100%; height:320px; background:#0c0b09;"></div>
+          </div>
+
           <div class="card-panel">
             <h2>Alle Buchungen &amp; Termine</h2>
-            <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center;">
-              <input type="text" id="booking-search" placeholder="Suche nach Name, E-Mail, Ort oder Bestellnummer..." style="padding: 10px 14px; background: #0c0b09; border: 1px solid rgba(255,244,230,0.12); color: #fff; border-radius: 6px; width: 100%; max-width: 400px;" oninput="filterBookings()">
+            <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center; flex-wrap:wrap;">
+              <input type="text" id="booking-search" placeholder="Suche nach Name, E-Mail, Ort oder Bestellnummer..." style="padding: 10px 14px; background: #0c0b09; border: 1px solid rgba(255,244,230,0.12); color: #fff; border-radius: 6px; width: 100%; max-width: 380px;" oninput="filterBookings()">
+              <select id="booking-delivery-filter" onchange="filterBookings()" style="padding: 10px 14px; background: #0c0b09; border: 1px solid rgba(255,244,230,0.12); color: #fff; border-radius: 6px; font-size:13px;">
+                <option value="">Alle Versandarten</option>
+                <option value="delivery">🚚 Nur Lieferung</option>
+                <option value="pickup">🏪 Nur Selbstabholung</option>
+              </select>
             </div>
             <div style="overflow-x: auto;">
               <table class="data-table">
                 <thead>
-                  <tr><th>Bestellnr.</th><th>Kunde &amp; Kontakt</th><th>Lieferort</th><th>Modell</th><th>Zeitraum</th><th>Preis</th><th>Status ändern</th></tr>
+                  <tr><th>Bestellnr.</th><th>Kunde &amp; Kontakt</th><th>Versandart</th><th>Ort</th><th>Modell</th><th>Zeitraum</th><th>Preis</th><th>Status ändern</th></tr>
                 </thead>
                 <tbody id="all-bookings-tbody"></tbody>
               </table>
@@ -861,6 +883,61 @@
       }
     }
 
+    let spaMapInstance = null;
+
+    function initSpaMap(list) {
+      const mapEl = document.getElementById('spa-bookings-map');
+      if (!mapEl || typeof L === 'undefined') return;
+
+      const stationLat = 52.0911;
+      const stationLng = 12.8711;
+
+      if (!spaMapInstance) {
+        spaMapInstance = L.map(mapEl, { scrollWheelZoom: false }).setView([52.3, 13.2], 9);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(spaMapInstance);
+      } else {
+        spaMapInstance.eachLayer(layer => {
+          if (layer instanceof L.Marker) spaMapInstance.removeLayer(layer);
+        });
+      }
+
+      // Hub Station
+      const hubIcon = L.divIcon({
+        className: 'hub-pin',
+        html: '<div style="background:#f59e0b; width:22px; height:22px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 10px rgba(245,158,11,0.8); display:flex; align-items:center; justify-content:center; color:#000; font-size:11px; font-weight:bold;">★</div>',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+      L.marker([stationLat, stationLng], { icon: hubIcon }).addTo(spaMapInstance)
+        .bindPopup('<b>Amphora-Spa Station</b><br>Tiefenbrunnen 1, 14929 Treuenbrietzen<br>Selbstabholungs-Station');
+
+      const bounds = L.latLngBounds([[stationLat, stationLng]]);
+      (list || []).forEach(b => {
+        if (!b.lat || !b.lng) return;
+        bounds.extend([b.lat, b.lng]);
+        const isPickup = b.delivery_type === 'pickup';
+        const color = isPickup ? '#8b5cf6' : (b.status === 'confirmed' ? '#10b981' : '#2563eb');
+        const pinIcon = L.divIcon({
+          className: 'spa-pin',
+          html: `<div style="background:${color}; width:16px; height:16px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.5);"></div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        });
+        L.marker([b.lat, b.lng], { icon: pinIcon }).addTo(spaMapInstance)
+          .bindPopup(`
+            <b>#${b.number} · ${b.first_name} ${b.last_name}</b><br>
+            <span style="font-size:11px; font-weight:bold; color:${isPickup ? '#8b5cf6' : '#2563eb'};">${isPickup ? '🏪 Selbstabholung' : '🚚 Lieferung'}</span><br>
+            ${b.model_name || 'Sauna'}<br>
+            ${b.address || ''}<br>
+            ${b.start_date} bis ${b.end_date}<br>
+            <strong>${(b.gross_cents / 100).toFixed(2).replace('.', ',')} €</strong>
+          `);
+      });
+      setTimeout(() => { if (spaMapInstance) spaMapInstance.invalidateSize(); }, 150);
+    }
+
     // Render Bookings
     function renderBookings(list) {
       const labels = { new: 'Neu', confirmed: 'Bestätigt', delivery: 'Unterwegs', active: 'Vermietet', completed: 'Abgeschlossen', cancelled: 'Storniert' };
@@ -882,38 +959,50 @@
         `).join('');
       document.getElementById('dash-bookings-tbody').innerHTML = dashHtml;
 
-      const allHtml = (!list || list.length === 0) ? '<tr><td colspan="7" style="padding:24px; color:#a39890; text-align:center;">Noch keine Buchungen vorhanden.</td></tr>' :
-        list.map(b => `
-          <tr>
-            <td><strong>${b.number}</strong></td>
-            <td>${b.first_name} ${b.last_name}<br><small style="color:#a39890;">${b.email} · ${b.phone || ''}</small></td>
-            <td>${b.address || ''}, ${b.city || ''}</td>
-            <td>${b.model_name || 'Sauna'}</td>
-            <td>${b.start_date} bis ${b.end_date}<br><small style="color:#a39890;">${b.nights} Nächte</small></td>
-            <td><strong>${(b.gross_cents / 100).toFixed(2).replace('.', ',')} €</strong></td>
-            <td>
-              <select class="status-select" onchange="updateStatus(${b.id}, this.value)">
-                ${['new', 'confirmed', 'delivery', 'active', 'completed', 'cancelled'].map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${labels[s]}</option>`).join('')}
-              </select>
-            </td>
-          </tr>
-        `).join('');
+      const allHtml = (!list || list.length === 0) ? '<tr><td colspan="8" style="padding:24px; color:#a39890; text-align:center;">Noch keine Buchungen vorhanden.</td></tr>' :
+        list.map(b => {
+          const isPickup = b.delivery_type === 'pickup';
+          const typeBadge = isPickup 
+            ? '<span class="status-badge" style="background:rgba(139,92,246,0.18); color:#c4b5fd; border:1px solid rgba(139,92,246,0.35);">🏪 Selbstabholung</span>'
+            : '<span class="status-badge" style="background:rgba(37,99,235,0.18); color:#93c5fd; border:1px solid rgba(37,99,235,0.35);">🚚 Lieferung</span>';
+          return `
+            <tr>
+              <td><strong>${b.number}</strong></td>
+              <td>${b.first_name} ${b.last_name}<br><small style="color:#a39890;">${b.email} · ${b.phone || ''}</small></td>
+              <td>${typeBadge}</td>
+              <td>${b.address || ''}, ${b.city || ''}</td>
+              <td>${b.model_name || 'Sauna'}</td>
+              <td>${b.start_date} bis ${b.end_date}<br><small style="color:#a39890;">${b.nights} Nächte</small></td>
+              <td><strong>${(b.gross_cents / 100).toFixed(2).replace('.', ',')} €</strong></td>
+              <td>
+                <select class="status-select" onchange="updateStatus(${b.id}, this.value)">
+                  ${['new', 'confirmed', 'delivery', 'active', 'completed', 'cancelled'].map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${labels[s]}</option>`).join('')}
+                </select>
+              </td>
+            </tr>
+          `;
+        }).join('');
       document.getElementById('all-bookings-tbody').innerHTML = allHtml;
+      initSpaMap(list);
     }
 
     function filterBookings() {
-      const q = (document.getElementById('booking-search').value || '').toLowerCase();
-      if (!q) {
-        renderBookings(allBookingsList);
-        return;
+      const q = (document.getElementById('booking-search').value || '').toLowerCase().trim();
+      const delFilter = (document.getElementById('booking-delivery-filter')?.value || '');
+      let filtered = allBookingsList;
+      if (delFilter) {
+        filtered = filtered.filter(b => (b.delivery_type || 'delivery') === delFilter);
       }
-      const filtered = allBookingsList.filter(b => 
-        (b.number || '').toLowerCase().includes(q) ||
-        (b.first_name || '').toLowerCase().includes(q) ||
-        (b.last_name || '').toLowerCase().includes(q) ||
-        (b.email || '').toLowerCase().includes(q) ||
-        (b.city || '').toLowerCase().includes(q)
-      );
+      if (q) {
+        filtered = filtered.filter(b => 
+          (b.number || '').toLowerCase().includes(q) ||
+          (b.first_name || '').toLowerCase().includes(q) ||
+          (b.last_name || '').toLowerCase().includes(q) ||
+          (b.email || '').toLowerCase().includes(q) ||
+          (b.address || '').toLowerCase().includes(q) ||
+          (b.city || '').toLowerCase().includes(q)
+        );
+      }
       renderBookings(filtered);
     }
 

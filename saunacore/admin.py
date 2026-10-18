@@ -6,9 +6,10 @@ import io
 import json
 import re
 import sqlite3
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from pathlib import Path
 
-from flask import Blueprint, Response, abort, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, current_app, flash, g, redirect, render_template, request, session, url_for
 
 from saunacore import seo, service
 from saunacore.db import get_db
@@ -104,13 +105,20 @@ def _model_fields(form, files, existing=None):
     highlights = [line.strip() for line in form.get("highlights", "").splitlines() if line.strip()]
     images = []
     for path in form.getlist("keep_image"):
-        if service.safe_image_path(path):
+        if service.safe_image_path(path) and path not in images:
             images.append(path)
+    raw_urls = form.get("image_urls", "")
+    for line in raw_urls.splitlines():
+        line = line.strip()
+        if line and service.safe_image_path(line) and line not in images:
+            images.append(line)
     for file_storage in files.getlist("images"):
         if file_storage and file_storage.filename:
-            images.append(service.save_image(file_storage))
-    if len(images) > 6:
-        raise ValueError("Höchstens 6 Bilder.")
+            saved_path = service.save_image(file_storage)
+            if saved_path not in images:
+                images.append(saved_path)
+    if len(images) > 40:
+        raise ValueError("Höchstens 40 Bilder.")
     if not images:
         raise ValueError("Mindestens ein Bild ist nötig.")
     return {
@@ -171,6 +179,9 @@ def _extra_fields(form, files):
     except ValueError as exc:
         raise ValueError("Reihenfolge ist ungültig.") from exc
     image = form.get("keep_image", "").strip()
+    custom_url = form.get("image_url", "").strip()
+    if custom_url and service.safe_image_path(custom_url):
+        image = custom_url
     if image and not service.safe_image_path(image):
         image = ""
     upload = files.get("image")
@@ -317,17 +328,21 @@ def dashboard():
 @bp.get("/buchungen")
 def bookings():
     db = get_db()
-    status = request.args.get("status", "")
+    status = request.args.get("status", "").strip()
+    delivery_type = request.args.get("delivery_type", "").strip()
     query = request.args.get("q", "").strip()
     sql = "SELECT * FROM bookings WHERE 1 = 1"
     params: list = []
     if status in service.STATUSES:
         sql += " AND status = ?"
         params.append(status)
+    if delivery_type in ("delivery", "pickup"):
+        sql += " AND delivery_type = ?"
+        params.append(delivery_type)
     if query:
-        sql += " AND (number LIKE ? OR email LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR city LIKE ?)"
+        sql += " AND (number LIKE ? OR email LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR city LIKE ? OR address LIKE ?)"
         like = f"%{query}%"
-        params.extend([like, like, like, like, like])
+        params.extend([like, like, like, like, like, like])
     try:
         page = max(1, int(request.args.get("page", 1)))
     except ValueError:
@@ -335,13 +350,45 @@ def bookings():
     total = db.execute(f"SELECT COUNT(*) AS c FROM ({sql})", params).fetchone()["c"]
     rows = db.execute(sql + " ORDER BY created_at DESC LIMIT 20 OFFSET ?", params + [(page - 1) * 20]).fetchall()
     pages = max(1, (total + 19) // 20)
+
+    # All geo-located bookings for Leaflet map
+    map_pins = []
+    pin_sql = "SELECT id, number, first_name, last_name, phone, model_name, address, city, lat, lng, status, delivery_type, start_date, end_date, gross_cents FROM bookings WHERE lat IS NOT NULL AND lng IS NOT NULL"
+    pin_params: list = []
+    if status in service.STATUSES:
+        pin_sql += " AND status = ?"
+        pin_params.append(status)
+    if delivery_type in ("delivery", "pickup"):
+        pin_sql += " AND delivery_type = ?"
+        pin_params.append(delivery_type)
+    pin_sql += " ORDER BY start_date DESC LIMIT 80"
+    for r in db.execute(pin_sql, pin_params):
+        map_pins.append({
+            "id": r["id"],
+            "number": r["number"],
+            "customer": f"{r['first_name']} {r['last_name']}",
+            "phone": r["phone"] or "",
+            "model": r["model_name"] or "Sauna",
+            "address": r["address"] or "",
+            "city": r["city"] or "",
+            "lat": r["lat"],
+            "lng": r["lng"],
+            "status": r["status"],
+            "delivery_type": r["delivery_type"] or "delivery",
+            "dates": f"{r['start_date']} – {r['end_date']}",
+            "gross": service.format_euro(r["gross_cents"]),
+            "href": url_for("admin.booking_detail", booking_id=r["id"]),
+        })
+
     return render_template(
         "admin/bookings.html",
         bookings=rows,
         status=status,
+        delivery_type=delivery_type,
         query=query,
         page=page,
         pages=pages,
+        map_pins=map_pins,
         title="Buchungen",
     )
 
@@ -353,15 +400,16 @@ def bookings_export():
     writer = csv.writer(buffer)
     writer.writerow(
         [
-            "Nummer", "Status", "Zahlung", "Zahlungsstatus", "Vorname", "Nachname", "E-Mail", "Telefon",
+            "Nummer", "Status", "Versandart", "Zahlung", "Zahlungsstatus", "Vorname", "Nachname", "E-Mail", "Telefon",
             "Firma", "USt-IdNr", "Modell", "Anreise", "Abreise", "Nächte", "Fenster", "Adresse", "Zone",
             "Miete", "Lieferung", "Extras", "Kaution", "Gutschein", "Code", "Gesamt", "MwSt", "Angelegt",
         ]
     )
     for row in rows:
+        dtype = "Selbstabholung" if row["delivery_type"] == "pickup" else "Lieferung"
         writer.writerow(
             [
-                row["number"], row["status"], row["payment_method"], row["payment_status"],
+                row["number"], row["status"], dtype, row["payment_method"], row["payment_status"],
                 row["first_name"], row["last_name"], row["email"], row["phone"],
                 row["company"], row["company_vat"], row["model_name"], row["start_date"], row["end_date"],
                 row["nights"], row["arrival_window"], row["address"], row["zone_name"],
@@ -399,8 +447,12 @@ def booking_new():
     models = db.execute("SELECT * FROM models WHERE active = 1 ORDER BY sort_order, id").fetchall()
     extras = db.execute("SELECT * FROM extras WHERE active = 1 ORDER BY sort_order, id").fetchall()
     if request.method == "POST":
+        delivery_type = request.form.get("delivery_type", "delivery")
+        if delivery_type not in ("delivery", "pickup"):
+            delivery_type = "delivery"
         data = {
             "model_id": request.form.get("model_id"),
+            "delivery_type": delivery_type,
             "start": request.form.get("start"),
             "end": request.form.get("end"),
             "address": request.form.get("address", ""),
@@ -470,6 +522,40 @@ def booking_note(booking_id):
     else:
         get_db().execute("UPDATE bookings SET admin_note = ? WHERE id = ?", (note, booking_id))
         flash("Notiz gespeichert.")
+    return redirect(url_for("admin.booking_detail", booking_id=booking_id))
+
+
+@bp.post("/buchungen/<int:booking_id>/delivery")
+def booking_delivery(booking_id):
+    db = get_db()
+    delivery_type = request.form.get("delivery_type", "delivery").strip()
+    if delivery_type not in ("delivery", "pickup"):
+        delivery_type = "delivery"
+    address = request.form.get("address", "").strip()
+    lat = request.form.get("lat")
+    lng = request.form.get("lng")
+    if delivery_type == "pickup":
+        if not address:
+            address = "Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)"
+        lat_val = 52.0911
+        lng_val = 12.8711
+    else:
+        try:
+            lat_val = float(lat) if lat else None
+            lng_val = float(lng) if lng else None
+        except ValueError:
+            lat_val, lng_val = None, None
+    db.execute(
+        "UPDATE bookings SET delivery_type = ?, address = ?, lat = ?, lng = ? WHERE id = ?",
+        (delivery_type, address, lat_val, lng_val, booking_id),
+    )
+    type_label = "Selbstabholung (Treuenbrietzen)" if delivery_type == "pickup" else "Lieferung an Wunschort"
+    service.add_booking_event(
+        db,
+        booking_id,
+        f"Versandart geändert: {type_label} — {address}",
+    )
+    flash(f"Versandart auf „{type_label}“ geändert.")
     return redirect(url_for("admin.booking_detail", booking_id=booking_id))
 
 
@@ -1000,14 +1086,13 @@ def customers():
 
 
 CONTENT_IMAGES = (
+    "/static/uploads/fasssauna-1.jpg",
+    "/static/uploads/kombi-1.jpg",
+    "/static/uploads/badefass-1.jpg",
     "/static/images/hero.jpg",
     "/static/images/choose.jpg",
     "/static/images/deliver.jpg",
     "/static/images/relax.jpg",
-    "/static/images/model-s.jpg",
-    "/static/images/model-x.jpg",
-    "/static/images/model-xl.jpg",
-    "/static/images/model-panorama.jpg",
     "/static/images/interior.jpg",
     "/static/images/interior-2.jpg",
     "/static/images/wood.jpg",
@@ -1015,16 +1100,41 @@ CONTENT_IMAGES = (
 )
 
 
+def get_available_images() -> list[str]:
+    results = []
+    try:
+        uploads_dir = Path(current_app.static_folder) / "uploads"
+        if uploads_dir.exists():
+            for file in sorted(uploads_dir.iterdir(), key=lambda f: f.stat().st_mtime, reverse=True):
+                if file.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".svg"}:
+                    results.append(f"/static/uploads/{file.name}")
+    except Exception:
+        pass
+    for img in CONTENT_IMAGES:
+        if img not in results:
+            results.append(img)
+    return results
+
+
 def _clip(value: str, limit: int) -> str:
     return (value or "").strip()[:limit]
 
 
-def _save_content(db, form):
+def _save_content(db, form, files=None):
+    files = files or {}
+    hero_image = form.get("hero_image", "").strip()
+    hero_upload = files.get("hero_image_file") if hasattr(files, "get") else None
+    if hero_upload and hero_upload.filename:
+        hero_image = service.save_image(hero_upload)
+    custom_hero = form.get("hero_image_custom", "").strip()
+    if custom_hero and service.safe_image_path(custom_hero):
+        hero_image = custom_hero
+
     updates = {
         "hero_kicker": _clip(form.get("hero_kicker", ""), 80),
         "hero_title": _clip(form.get("hero_title", ""), 180),
         "hero_lede": _clip(form.get("hero_lede", ""), 400),
-        "hero_image": form.get("hero_image", "").strip(),
+        "hero_image": hero_image,
         "fleet_title": _clip(form.get("fleet_title", ""), 120),
         "fleet_text": _clip(form.get("fleet_text", ""), 600),
         "fleet_page_title": _clip(form.get("fleet_page_title", ""), 180),
@@ -1063,16 +1173,23 @@ def _save_content(db, form):
         points.append({"icon": icon, "title": title[:80], "text": text[:400]})
     if not points:
         raise ValueError("Mindestens ein Vorteil wird gebraucht.")
+
     steps = []
-    for title, text, image in zip(form.getlist("step_title"), form.getlist("step_text"), form.getlist("step_image")):
+    step_titles = form.getlist("step_title")
+    step_texts = form.getlist("step_text")
+    step_images = form.getlist("step_image")
+    step_files = files.getlist("step_image_file") if hasattr(files, "getlist") else []
+    for i, (title, text, image) in enumerate(zip(step_titles, step_texts, step_images)):
         title = title.strip()
         text = text.strip()
         if not title and not text:
             continue
         if not title or not text:
             raise ValueError("Jeder Schritt braucht Titel und Text.")
-        if not service.safe_image_path(image):
-            image = "/static/images/choose.jpg"
+        if i < len(step_files) and step_files[i] and step_files[i].filename:
+            image = service.save_image(step_files[i])
+        elif not service.safe_image_path(image):
+            image = "/static/uploads/fasssauna-1.jpg"
         steps.append({"title": title[:80], "text": text[:800], "image": image})
     if not steps:
         raise ValueError("Mindestens ein Schritt wird gebraucht.")
@@ -1102,11 +1219,11 @@ def content():
     db = get_db()
     if request.method == "POST":
         try:
-            _save_content(db, request.form)
+            _save_content(db, request.form, request.files)
         except ValueError as exc:
             flash(str(exc), "error")
         else:
-            flash("Texte gespeichert. Die Website zeigt sie sofort.")
+            flash("Texte und Bilder gespeichert. Die Website zeigt sie sofort.")
         return redirect(url_for("admin.content"))
     settings = service.load_settings(db)
     return render_template(
@@ -1114,7 +1231,7 @@ def content():
         points=service.json_list(settings.get("points_json", ""), service.CONTENT_DEFAULTS["points_json"]),
         steps=service.json_list(settings.get("steps_json", ""), service.CONTENT_DEFAULTS["steps_json"]),
         faq=service.json_list(settings.get("faq_json", ""), service.CONTENT_DEFAULTS["faq_json"]),
-        images=CONTENT_IMAGES,
+        images=get_available_images(),
         icons=ICON_CHOICES,
         title="Inhalte",
     )
@@ -1223,3 +1340,63 @@ def settings():
         flash("Einstellungen gespeichert.")
         return redirect(url_for("admin.settings"))
     return render_template("admin/settings.html", title="Einstellungen")
+
+
+@bp.get("/medien")
+def media_gallery():
+    uploads_dir = Path(current_app.static_folder) / "uploads"
+    files = []
+    if uploads_dir.exists():
+        for f in sorted(uploads_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+            if f.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".svg"}:
+                stat = f.stat()
+                size_kb = round(stat.st_size / 1024, 1)
+                files.append({
+                    "name": f.name,
+                    "url": f"/static/uploads/{f.name}",
+                    "size_kb": size_kb,
+                    "date": datetime.fromtimestamp(stat.st_mtime).strftime("%d.%m.%Y %H:%M"),
+                })
+    return render_template(
+        "admin/media.html",
+        files=files,
+        total_files=len(files),
+        title="Medien & Fotos",
+    )
+
+
+@bp.post("/medien/upload")
+def media_upload():
+    uploaded_files = request.files.getlist("files")
+    if not uploaded_files or (len(uploaded_files) == 1 and not uploaded_files[0].filename):
+        single = request.files.get("file")
+        uploaded_files = [single] if single and single.filename else []
+    saved = []
+    for f in uploaded_files:
+        if f and f.filename:
+            try:
+                url = service.save_image(f)
+                saved.append(url)
+            except ValueError as exc:
+                flash(f"{f.filename}: {exc}", "error")
+    if saved:
+        flash(f"{len(saved)} Bild(er) erfolgreich hochgeladen.")
+    if request.headers.get("Accept") == "application/json" or request.is_json:
+        return {"ok": True, "saved": saved}
+    return redirect(url_for("admin.media_gallery"))
+
+
+@bp.post("/medien/<path:filename>/loeschen")
+def media_delete(filename):
+    safe_name = Path(filename).name
+    target = Path(current_app.static_folder) / "uploads" / safe_name
+    if target.exists() and target.is_file():
+        try:
+            target.unlink()
+            flash(f"Bild {safe_name} gelöscht.")
+        except OSError as exc:
+            flash(f"Konnte nicht gelöscht werden: {exc}", "error")
+    else:
+        flash("Datei nicht gefunden.", "error")
+    return redirect(url_for("admin.media_gallery"))
+

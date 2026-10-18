@@ -2,48 +2,195 @@
 {% block body %}
 <header class="page-head">
   <div>
-    <h1>Buchungen</h1>
-    <p class="lead">Suche nach Nummer, Name, E-Mail oder Ort. Der Statusfilter zeigt nur eine Stufe.</p>
+    <h1>Buchungen &amp; Lieferkarte</h1>
+    <p class="lead">Übersicht aller Aufträge auf der Karte: Wohin wurde geliefert und wo holen Kunden die Sauna selbst ab.</p>
   </div>
   <div class="row-actions">
-    <a class="btn ghost" href="{{ url_for('admin.bookings_export') }}">CSV</a>
+    <a class="btn ghost" href="{{ url_for('admin.bookings_export') }}">CSV Export</a>
+    <a class="btn" href="{{ url_for('admin.booking_new') }}">+ Neue Buchung</a>
   </div>
 </header>
-<form class="filters" method="get">
-  <input name="q" value="{{ query }}" placeholder="Nummer, Name, E-Mail, Ort">
-  <select name="status">
+
+<!-- Interaktive Auftrags- und Lieferkarte -->
+<section class="panel" style="padding:0; overflow:hidden; margin-bottom:24px;">
+  <div style="padding:14px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:#141311; border-bottom:1px solid rgba(255,244,230,0.08);">
+    <div>
+      <h2 style="margin:0; font-size:16px;">Auftrags- &amp; Lieferkarte</h2>
+      <p style="margin:4px 0 0; font-size:12px; color:#a39890;">Klicke auf eine Markierung, um Kunden-, Liefer- und Buchungsdaten anzuzeigen.</p>
+    </div>
+    <div style="display:flex; gap:12px; font-size:12px; align-items:center; flex-wrap:wrap;">
+      <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#f59e0b; border:2px solid #fff;"></span> <strong>Station Treuenbrietzen</strong></span>
+      <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#2563eb;"></span> 🚚 Lieferung</span>
+      <span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#8b5cf6;"></span> 🏪 Selbstabholung</span>
+    </div>
+  </div>
+  <div id="bookings-map" style="width:100%; height:380px; background:#0c0c0c;"></div>
+</section>
+
+<!-- Filterleiste -->
+<form class="filters" method="get" style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+  <input name="q" value="{{ query }}" placeholder="Nummer, Name, E-Mail, Adresse, Ort" style="flex:1; min-width:220px;">
+  
+  <select name="delivery_type" style="min-width:180px;">
+    <option value="">Alle Versandarten</option>
+    <option value="delivery" {% if delivery_type == 'delivery' %}selected{% endif %}>🚚 Nur Lieferung</option>
+    <option value="pickup" {% if delivery_type == 'pickup' %}selected{% endif %}>🏪 Nur Selbstabholung</option>
+  </select>
+
+  <select name="status" style="min-width:160px;">
     <option value="">Alle Status</option>
     {% for key, label in status_labels.items() %}
     <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
+
   <button class="btn" type="submit">Filtern</button>
+  {% if query or status or delivery_type %}
+  <a class="btn ghost" href="{{ url_for('admin.bookings') }}">Zurücksetzen</a>
+  {% endif %}
 </form>
+
+<!-- Tabelle -->
 <div class="panel">
   <table>
-    <thead><tr><th>Nummer</th><th>Kunde</th><th>Modell</th><th>Zeitraum</th><th>Summe</th><th>Status</th><th>Karte</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Nummer</th>
+        <th>Kunde</th>
+        <th>Versandart</th>
+        <th>Modell</th>
+        <th>Zeitraum</th>
+        <th>Summe</th>
+        <th>Status</th>
+        <th>Aktionen</th>
+      </tr>
+    </thead>
     <tbody>
       {% for booking in bookings %}
       <tr>
-        <td><a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}">{{ booking.number }}</a></td>
-        <td>{{ booking.first_name }} {{ booking.last_name }}<br><small>{{ booking.email }}</small></td>
+        <td>
+          <a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}" style="font-weight:700; color:#fff;">
+            {{ booking.number }}
+          </a>
+        </td>
+        <td>
+          <strong>{{ booking.first_name }} {{ booking.last_name }}</strong><br>
+          <small style="color:#a39890;">{{ booking.email }}{% if booking.phone %} · {{ booking.phone }}{% endif %}</small>
+        </td>
+        <td>
+          {% if booking.delivery_type == 'pickup' %}
+          <span class="pill" style="background:rgba(139,92,246,0.18); color:#c4b5fd; border:1px solid rgba(139,92,246,0.35); font-weight:600; font-size:12px;">
+            🏪 Selbstabholung
+          </span>
+          <br><small style="color:#a39890;">Station Treuenbrietzen</small>
+          {% else %}
+          <span class="pill" style="background:rgba(37,99,235,0.18); color:#93c5fd; border:1px solid rgba(37,99,235,0.35); font-weight:600; font-size:12px;">
+            🚚 Lieferung
+          </span>
+          <br><small style="color:#a39890;" title="{{ booking.address }}">{{ booking.city or booking.address|truncate(28) }}</small>
+          {% endif %}
+        </td>
         <td>{{ booking.model_name }}</td>
-        <td>{{ booking.start_date }} – {{ booking.end_date }}<br><small>{{ booking.nights }} Nächte</small></td>
-        <td>{{ euro(booking.gross_cents) }}</td>
+        <td>
+          {{ booking.start_date }} – {{ booking.end_date }}<br>
+          <small style="color:#a39890;">{{ booking.nights }} Nächte</small>
+        </td>
+        <td><strong>{{ euro(booking.gross_cents) }}</strong></td>
         <td><span class="pill {{ booking.status }}">{{ status_labels[booking.status] }}</span></td>
-        <td><a href="{{ maps_url(booking.lat, booking.lng, booking.address) }}" target="_blank" rel="noopener">Öffnen</a></td>
+        <td>
+          <a class="btn ghost" style="padding:4px 8px; font-size:12px;" href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}">Öffnen</a>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="7">Keine Buchungen.</td></tr>
+      <tr><td colspan="8" style="padding:24px; text-align:center; color:#a39890;">Keine Buchungen gefunden.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
 {% if pages > 1 %}
 <p class="pager">
-  {% if page > 1 %}<a href="{{ url_for('admin.bookings', q=query, status=status, page=page-1) }}">Zurück</a>{% endif %}
+  {% if page > 1 %}<a href="{{ url_for('admin.bookings', q=query, status=status, delivery_type=delivery_type, page=page-1) }}">Zurück</a>{% endif %}
   Seite {{ page }} von {{ pages }}
-  {% if page < pages %}<a href="{{ url_for('admin.bookings', q=query, status=status, page=page+1) }}">Weiter</a>{% endif %}
+  {% if page < pages %}<a href="{{ url_for('admin.bookings', q=query, status=status, delivery_type=delivery_type, page=page+1) }}">Weiter</a>{% endif %}
 </p>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function() {
+    const mapEl = document.getElementById("bookings-map");
+    if (!mapEl || typeof L === "undefined") return;
+
+    // Station Treuenbrietzen: Tiefenbrunnen 1, 14929 Treuenbrietzen
+    const stationLat = 52.0911;
+    const stationLng = 12.8711;
+
+    const map = L.map(mapEl, { scrollWheelZoom: false }).setView([52.3, 13.2], 9);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // Pickup Station Pin (Gold/Orange Hub)
+    const hubIcon = L.divIcon({
+      className: "custom-hub-pin",
+      html: '<div style="background:#f59e0b; width:22px; height:22px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 10px rgba(245,158,11,0.8); display:flex; align-items:center; justify-content:center; color:#000; font-size:11px; font-weight:bold;">★</div>',
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+
+    const hubMarker = L.marker([stationLat, stationLng], { icon: hubIcon }).addTo(map);
+    hubMarker.bindPopup(`
+      <div style="font-family:sans-serif; color:#111; line-height:1.4;">
+        <strong style="color:#d97706; font-size:14px;">🏪 Amphora-Spa Hauptstation</strong><br>
+        <strong>Tiefenbrunnen 1, 14929 Treuenbrietzen</strong><br>
+        <span style="font-size:12px; color:#555;">Kostenlose Selbstabholung für alle Modelle (Klasse BE)</span><br>
+        <span style="font-size:12px; color:#555;">Tel: +49 176 2033 1535</span>
+      </div>
+    `);
+
+    // Map pins from backend
+    const pins = {{ map_pins|tojson if map_pins else '[]' }};
+    const bounds = L.latLngBounds([[stationLat, stationLng]]);
+
+    pins.forEach(p => {
+      if (!p.lat || !p.lng) return;
+      bounds.extend([p.lat, p.lng]);
+
+      const isPickup = p.delivery_type === "pickup";
+      const color = isPickup ? "#8b5cf6" : (p.status === "confirmed" ? "#10b981" : (p.status === "cancelled" ? "#ef4444" : "#2563eb"));
+
+      const pinIcon = L.divIcon({
+        className: "custom-order-pin",
+        html: `<div style="background:${color}; width:16px; height:16px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.5);"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+
+      const marker = L.marker([p.lat, p.lng], { icon: pinIcon }).addTo(map);
+      marker.bindPopup(`
+        <div style="font-family:sans-serif; color:#111; font-size:13px; line-height:1.4; min-width:200px;">
+          <strong style="font-size:14px;">#${p.number} · ${p.customer}</strong><br>
+          <span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600; margin:4px 0; background:${isPickup ? '#ede9fe; color:#6d28d9' : '#dbeafe; color:#1d4ed8'};">
+            ${isPickup ? '🏪 Selbstabholung' : '🚚 Lieferung'}
+          </span><br>
+          <b>Modell:</b> ${p.model}<br>
+          <b>Ort:</b> ${p.address}<br>
+          ${p.phone ? `<b>Tel:</b> <a href="tel:${p.phone}">${p.phone}</a><br>` : ''}
+          <b>Zeitraum:</b> ${p.dates}<br>
+          <b>Betrag:</b> ${p.gross}<br>
+          <div style="margin-top:8px;">
+            <a href="${p.href}" style="color:#d97706; font-weight:bold; text-decoration:none;">Details &amp; Bearbeiten &rarr;</a>
+          </div>
+        </div>
+      `);
+    });
+
+    if (pins.length > 0) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+    }
+  })();
+</script>
 {% endblock %}

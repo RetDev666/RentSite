@@ -109,7 +109,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     company TEXT NOT NULL DEFAULT '',
     company_vat TEXT NOT NULL DEFAULT '',
     access_ok INTEGER NOT NULL DEFAULT 0,
-    stripe_session TEXT NOT NULL DEFAULT ''
+    stripe_session TEXT NOT NULL DEFAULT '',
+    delivery_type TEXT NOT NULL DEFAULT 'delivery'
 );
 
 CREATE TABLE IF NOT EXISTS booking_events (
@@ -217,6 +218,7 @@ def migrate(conn: sqlite3.Connection) -> None:
         ("company_vat", "company_vat TEXT NOT NULL DEFAULT ''"),
         ("access_ok", "access_ok INTEGER NOT NULL DEFAULT 0"),
         ("stripe_session", "stripe_session TEXT NOT NULL DEFAULT ''"),
+        ("delivery_type", "delivery_type TEXT NOT NULL DEFAULT 'delivery'"),
     ):
         _add_column(conn, "bookings", name, ddl)
     for name, ddl in (

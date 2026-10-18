@@ -1,0 +1,90 @@
+{% extends "admin/base.html" %}
+{% block body %}
+<header class="page-head">
+  <div>
+    <h1>Medien &amp; Fotos</h1>
+    <p class="lead">Hier verwaltest du alle Bilder der Website (Modelle, Hero-Banner, Schritte, Extras). Lade neue Fotos hoch und kopiere den Pfad mit einem Klick.</p>
+  </div>
+</header>
+
+<section class="panel" style="margin-bottom: 24px;">
+  <h2>Neues Foto hochladen</h2>
+  <form method="post" action="{{ url_for('admin.media_upload') }}" enctype="multipart/form-data" id="upload-form" style="display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label style="flex:1; min-width:260px; display:flex; flex-direction:column; gap:6px;">
+      <span style="font-weight:600; font-size:13px; color:#e2d9d0;">Bilder auswählen (JPG, PNG, WebP)</span>
+      <input type="file" name="files" accept="image/jpeg,image/png,image/webp" multiple required style="padding:10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); border-radius:6px; color:#fff;">
+    </label>
+    <button class="btn" type="submit" style="align-self:flex-end;">Bilder hochladen</button>
+  </form>
+</section>
+
+<div class="panel">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+    <h2>Foto-Bibliothek ({{ total_files }})</h2>
+    <input type="text" id="media-filter" placeholder="Fotos filtern..." style="max-width:280px; padding:8px 12px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); border-radius:6px; color:#fff; font-size:14px;">
+  </div>
+
+  <div id="media-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:18px;">
+    {% for file in files %}
+    <article class="media-card" data-name="{{ file.name|lower }}" style="background:#141311; border:1px solid rgba(255,244,230,0.08); border-radius:10px; overflow:hidden; display:flex; flex-direction:column;">
+      <div style="aspect-ratio:4/3; background:#0a0a09; overflow:hidden; position:relative;">
+        <img src="{{ file.url }}" alt="{{ file.name }}" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;">
+      </div>
+      <div style="padding:12px; flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:10px;">
+        <div>
+          <strong style="display:block; font-size:13px; color:#fff; word-break:break-all; line-height:1.3;" title="{{ file.name }}">{{ file.name }}</strong>
+          <span style="font-size:11px; color:#a39890;">{{ file.size_kb }} KB · {{ file.date }}</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn ghost btn-copy" data-url="{{ file.url }}" style="flex:1; padding:6px 8px; font-size:12px; text-align:center;">Pfad kopieren</button>
+          <form method="post" action="{{ url_for('admin.media_delete', filename=file.name) }}" onsubmit="return confirm('Bild wirklich unwiderruflich löschen?');" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn danger" style="padding:6px 10px; font-size:12px;" title="Löschen">✕</button>
+          </form>
+        </div>
+      </div>
+    </article>
+    {% else %}
+    <p style="grid-column:1/-1; padding:24px; text-align:center; color:#a39890;">Noch keine Bilder im Upload-Ordner vorhanden.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Filter media items
+  const filterInput = document.getElementById("media-filter");
+  if (filterInput) {
+    filterInput.addEventListener("input", () => {
+      const q = filterInput.value.toLowerCase().trim();
+      document.querySelectorAll(".media-card").forEach((card) => {
+        const name = card.dataset.name || "";
+        card.style.display = (!q || name.includes(q)) ? "" : "none";
+      });
+    });
+  }
+
+  // Copy URL with visual feedback
+  document.querySelectorAll(".btn-copy").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const url = btn.dataset.url;
+      try {
+        await navigator.clipboard.writeText(url);
+        const original = btn.textContent;
+        btn.textContent = "Kopiert! ✓";
+        btn.style.color = "#00e699";
+        btn.style.borderColor = "#00e699";
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.style.color = "";
+          btn.style.borderColor = "";
+        }, 1800);
+      } catch (_e) {
+        prompt("Pfad kopieren:", url);
+      }
+    });
+  });
+</script>
+{% endblock %}

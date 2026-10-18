@@ -54,11 +54,25 @@
     {% endfor %}
   </fieldset>
   <fieldset>
-    <legend>Bilder</legend>
-    {% for image in images %}
-    <label class="check"><input type="checkbox" name="keep_image" value="{{ image }}" checked><img class="thumb" src="{{ image }}" alt=""> behalten</label>
-    {% endfor %}
-    <label>Neue Bilder<input type="file" name="images" accept="image/jpeg,image/png,image/webp" multiple></label>
+    <legend>Bilder (Galerie &amp; Upload)</legend>
+    <p class="fine">Hier siehst du alle aktuellen Bilder des Modells. Hake die Bilder ab, die du behalten möchtest, oder lade neue hoch. Du kannst auch zusätzliche Bildpfade (z.B. aus der <a href="{{ url_for('admin.media_gallery') }}" target="_blank" style="color:#ffaa00; text-decoration:underline;">Medien-Bibliothek</a>) einfügen.</p>
+    
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:12px; margin-bottom:16px;">
+      {% for image in images %}
+      <div style="background:#141311; border:1px solid rgba(255,244,230,0.1); border-radius:8px; overflow:hidden; padding:8px; text-align:center;">
+        <img class="thumb" src="{{ image }}" alt="" style="width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:4px; display:block; margin-bottom:6px;">
+        <label class="check" style="font-size:12px; justify-content:center; margin:0;"><input type="checkbox" name="keep_image" value="{{ image }}" checked> behalten</label>
+      </div>
+      {% endfor %}
+    </div>
+
+    <label style="display:block; margin-bottom:12px;">Neue Bilder hochladen (mehrere möglich)
+      <input type="file" name="images" accept="image/jpeg,image/png,image/webp" multiple style="padding:10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); border-radius:6px; width:100%; color:#fff;">
+    </label>
+
+    <label style="display:block;">Zusätzliche Bild-URLs oder Pfade (eine Zeile pro Bild)
+      <textarea name="image_urls" rows="3" placeholder="/static/uploads/badefass-1.jpg&#10;https://..."></textarea>
+    </label>
   </fieldset>
   <button class="btn" type="submit">Speichern</button>
 </form>

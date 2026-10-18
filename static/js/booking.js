@@ -11,6 +11,7 @@
     address: (boot.prefill && boot.prefill.address) || "",
     lat: boot.prefill && boot.prefill.lat ? Number(boot.prefill.lat) : null,
     lng: boot.prefill && boot.prefill.lng ? Number(boot.prefill.lng) : null,
+    delivery_type: "delivery",
     qty: {},
     step: 1,
     quote: null,
@@ -245,6 +246,52 @@
   });
   if (state.lat != null && state.lng != null) onPin(state.lat, state.lng);
 
+  const btnDelivery = byId("btn-delivery");
+  const btnPickup = byId("btn-pickup");
+  const pickupInfoBox = byId("pickup-info-box");
+  const deliveryFine = byId("delivery-fine");
+  const windowPickWrap = byId("window-pick-wrap");
+
+  function setDeliveryMode(mode) {
+    state.delivery_type = mode;
+    if (mode === "pickup") {
+      if (btnPickup) { btnPickup.classList.add("is-active"); btnPickup.classList.remove("ghost"); }
+      if (btnDelivery) { btnDelivery.classList.remove("is-active"); btnDelivery.classList.add("ghost"); }
+      if (pickupInfoBox) pickupInfoBox.style.display = "block";
+      if (deliveryFine) deliveryFine.style.display = "none";
+      if (windowPickWrap) windowPickWrap.style.display = "none";
+
+      state.lat = 52.0911;
+      state.lng = 12.8711;
+      state.address = "Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)";
+      showPlace(state.address);
+      byId("zone-badge").textContent = "Kostenlose Selbstabholung (0 €)";
+      if (pinMap) {
+        if (pinMap.place) pinMap.place(52.0911, 12.8711, true);
+        if (pinMap.map) pinMap.map.setView([52.0911, 12.8711], 13);
+      }
+      scheduleQuote();
+    } else {
+      if (btnDelivery) { btnDelivery.classList.add("is-active"); btnDelivery.classList.remove("ghost"); }
+      if (btnPickup) { btnPickup.classList.remove("is-active"); btnPickup.classList.add("ghost"); }
+      if (pickupInfoBox) pickupInfoBox.style.display = "none";
+      if (deliveryFine) deliveryFine.style.display = "block";
+      if (windowPickWrap) windowPickWrap.style.display = "block";
+
+      if (state.address && state.address.includes("Treuenbrietzen")) {
+        state.address = "";
+        state.lat = null;
+        state.lng = null;
+        showPlace("");
+        byId("zone-badge").textContent = "Lieferzone nach Markierung";
+      }
+      scheduleQuote();
+    }
+  }
+
+  if (btnDelivery) btnDelivery.addEventListener("click", () => setDeliveryMode("delivery"));
+  if (btnPickup) btnPickup.addEventListener("click", () => setDeliveryMode("pickup"));
+
   document.querySelectorAll(".extra-card").forEach((card) => {
     const id = Number(card.dataset.extraId);
     const output = card.querySelector("output");
@@ -321,6 +368,7 @@
       headers: { "Content-Type": "application/json", "X-CSRF-Token": boot.csrf },
       body: JSON.stringify({
         model_id: boot.model.id,
+        delivery_type: state.delivery_type || "delivery",
         start: state.start,
         end: state.end,
         address: state.address.trim(),
@@ -473,6 +521,7 @@
     const method = document.querySelector('input[name="pay"]:checked').value;
     const payload = {
       model_id: boot.model.id,
+      delivery_type: state.delivery_type || "delivery",
       start: state.start,
       end: state.end,
       address: state.address.trim(),
@@ -486,13 +535,13 @@
       notes: byId("notes").value.trim(),
       payment_method: method,
       client_token: state.token,
-      arrival_window: windowValue(),
+      arrival_window: windowValue() || (state.delivery_type === "pickup" ? "flexibel" : ""),
       access_ok: true,
       voucher_code: (byId("voucher") && byId("voucher").value.trim()) || "",
       company: (byId("company") && byId("company").value.trim()) || "",
       company_vat: (byId("company-vat") && byId("company-vat").value.trim()) || "",
     };
-    if (!payload.arrival_window) {
+    if (state.delivery_type !== "pickup" && !payload.arrival_window) {
       showError("Bitte wähle ein Lieferfenster.");
       return;
     }

@@ -67,7 +67,7 @@ class SaunacoreTests(unittest.TestCase):
     def guest(self, **overrides):
         start, end = self.span(40, 3)
         data = {
-            "model_id": self.model_id("model-xl"),
+            "model_id": self.model_id("fasssauna-panorama"),
             "start": start,
             "end": end,
             "address": "Unter den Linden 1, 10115 Berlin",
@@ -146,7 +146,7 @@ class SaunacoreTests(unittest.TestCase):
         try:
             start, end = self.span(55, 2)
             response = self.quote(
-                model_id=self.model_id("model-xl"),
+                model_id=self.model_id("fasssauna-panorama"),
                 start=start,
                 end=end,
                 address="irgendwo anders, 80331 München",
@@ -179,7 +179,7 @@ class SaunacoreTests(unittest.TestCase):
     def test_quote_uses_server_price(self):
         start, end = self.span(50, 3)
         plain = self.quote(
-            model_id=self.model_id("model-xl"),
+            model_id=self.model_id("fasssauna-panorama"),
             start=start,
             end=end,
             address="Pariser Platz 1, 10115 Berlin",
@@ -189,27 +189,28 @@ class SaunacoreTests(unittest.TestCase):
         self.assertEqual(plain.status_code, 200, plain.get_json())
         body = plain.get_json()
         self.assertEqual(body["nights"], 3)
-        self.assertEqual(body["rent_cents"], 44700)
+        self.assertEqual(body["rent_cents"], 27000)
         self.assertEqual(body["delivery_cents"], 0)
-        self.assertEqual(body["gross_cents"], 44700)
-        self.assertEqual(body["vat_cents"], 7137)
+        self.assertEqual(body["deposit_cents"], 30000)
+        self.assertEqual(body["gross_cents"], 57000)
+        self.assertEqual(body["vat_cents"], 9101)
         wood = self.quote(
-            model_id=self.model_id("model-xl"),
+            model_id=self.model_id("fasssauna-panorama"),
             start=start,
             end=end,
             address="Pariser Platz 1, 10115 Berlin",
             extras=[{"id": self.extra_id("extra-kaminholz"), "qty": 1}],
         )
-        self.assertEqual(wood.get_json()["gross_cents"], 46200)
-        self.assertEqual(wood.get_json()["vat_cents"], 7376)
-        self.assertEqual(self.quote(model_id=self.model_id("model-xl"), start="nope", end=end).status_code, 400)
+        self.assertEqual(wood.get_json()["gross_cents"], 58500)
+        self.assertEqual(wood.get_json()["vat_cents"], 9340)
+        self.assertEqual(self.quote(model_id=self.model_id("fasssauna-panorama"), start="nope", end=end).status_code, 400)
         denied = self.client.post("/api/quote", json={"model_id": 1, "start": start, "end": end})
         self.assertEqual(denied.status_code, 400)
 
     def test_seed_booking_and_maintenance_block(self):
         seeded = self.db.execute("SELECT * FROM bookings WHERE client_token = 'seed-max'").fetchone()
-        self.assertEqual(seeded["gross_cents"], 46200)
-        self.assertEqual(seeded["vat_cents"], 7376)
+        self.assertEqual(seeded["gross_cents"], 58500)
+        self.assertEqual(seeded["vat_cents"], 9340)
         self.assertEqual(seeded["payment_status"], "simulated")
         self.assertNotIn(seeded["card_last4"], {"", None})
         anna = self.db.execute("SELECT * FROM bookings WHERE client_token = 'seed-anna'").fetchone()
@@ -218,7 +219,7 @@ class SaunacoreTests(unittest.TestCase):
         self.assertEqual(anna["payment_method"], "invoice")
         start, end = self.span(20, 2)
         blocked = self.quote(
-            model_id=self.model_id("model-s"),
+            model_id=self.model_id("badefass"),
             start=start,
             end=end,
             address="Seeweg 2, 14193 Berlin",
@@ -241,7 +242,7 @@ class SaunacoreTests(unittest.TestCase):
         overlap = self.book(**self.guest(client_token="twice", email="two@example.com"))
         self.assertEqual(overlap.status_code, 400)
         row = self.db.execute("SELECT * FROM bookings WHERE client_token = 'once'").fetchone()
-        self.assertEqual(row["gross_cents"], 44700)
+        self.assertEqual(row["gross_cents"], 57000)
         self.assertNotIn("4242424242424242", " ".join(str(value) for value in tuple(row)))
         service.set_status(self.db, row["id"], "cancelled")
         rebooked = self.book(**self.guest(client_token="third", email="three@example.com"))
@@ -290,7 +291,7 @@ class SaunacoreTests(unittest.TestCase):
         invoice_start, invoice_end = self.span(70, 2)
         invoice = self.book(
             **self.guest(
-                model_id=self.model_id("model-x"),
+                model_id=self.model_id("kombi-sauna-badefass"),
                 start=invoice_start,
                 end=invoice_end,
                 address="Markt 1, 80331 München",
@@ -304,29 +305,29 @@ class SaunacoreTests(unittest.TestCase):
         self.assertEqual(bill["status"], "new")
         self.assertEqual(bill["payment_status"], "unpaid")
         self.assertEqual(bill["delivery_cents"], 9000)
-        self.assertEqual(bill["rent_cents"], 23800)
-        self.assertEqual(bill["gross_cents"], 32800)
+        self.assertEqual(bill["rent_cents"], 20000)
+        self.assertEqual(bill["gross_cents"], 59000)
 
     def test_public_pages_and_contact(self):
         pages = {
-            "/": "Premium Sauna",
-            "/flotte": "Model Panorama",
-            "/flotte/model-xl": "Handwerkskunst trifft auf Natur",
-            "/buchen/model-xl": "Weiter zu Extras",
-            "/so-funktionierts": "Wir liefern",
+            "/": "Amphora-Spa",
+            "/flotte": "Panoramasauna",
+            "/flotte/fasssauna-panorama": "Panoramasauna",
+            "/buchen/fasssauna-panorama": "Weiter zu Extras",
+            "/so-funktionierts": "Drei Schritte",
             "/preise": "Endpreise",
             "/kontakt": "Nachricht",
             "/faq": "Stornierung",
-            "/impressum": "Musterstraße",
-            "/datenschutz": "hallo@saunacore.de",
+            "/impressum": "Treuenbrietzen",
+            "/datenschutz": "info@amphora-spa.de",
             "/agb": "MwSt",
-            "/mietbedingungen": "7",
+            "/mietbedingungen": "Kaution",
         }
         for path, needle in pages.items():
             response = self.client.get(path)
             self.assertEqual(response.status_code, 200, path)
             self.assertIn(needle, response.get_data(as_text=True))
-        booking = self.client.get("/buchen/model-xl?start=2026-11-01&end=2026-11-04&address=10115%20Berlin")
+        booking = self.client.get("/buchen/fasssauna-panorama?start=2026-11-01&end=2026-11-04&address=10115%20Berlin")
         self.assertIn("booking.js", booking.get_data(as_text=True))
         self.assertIn("noindex", booking.get_data(as_text=True))
 
@@ -338,7 +339,7 @@ class SaunacoreTests(unittest.TestCase):
 
         self.assertNotEqual(description("/"), description("/flotte"))
         self.assertNotEqual(description("/flotte"), description("/kontakt"))
-        self.assertIn("Model XL mieten", self.client.get("/flotte/model-xl").get_data(as_text=True))
+        self.assertIn("Panoramasauna mieten", self.client.get("/flotte/fasssauna-panorama").get_data(as_text=True))
         home = self.client.get("/")
         self.assertIn("application/ld+json", home.get_data(as_text=True))
         self.assertIn('rel="canonical"', home.get_data(as_text=True))
@@ -347,7 +348,7 @@ class SaunacoreTests(unittest.TestCase):
         self.assertIn("Disallow: /admin", robots.get_data(as_text=True))
         self.assertIn("Disallow: /api", robots.get_data(as_text=True))
         sitemap = self.client.get("/sitemap.xml").get_data(as_text=True)
-        self.assertIn("/flotte/model-xl", sitemap)
+        self.assertIn("/flotte/fasssauna-panorama", sitemap)
         self.assertNotIn("/buchen/", sitemap)
         self.assertNotIn("/buchung/", sitemap)
         self.assertNotIn("/admin", sitemap)
@@ -385,7 +386,7 @@ class SaunacoreTests(unittest.TestCase):
             "/admin/buchungen": "SC-",
             "/admin/buchungen/neu": "Neue Buchung",
             "/admin/kalender": "Kalender",
-            "/admin/modelle": "Model XL",
+            "/admin/modelle": "Panoramasauna",
             "/admin/extras": "VIP Endreinigung",
             "/admin/zonen": "Zone A",
             "/admin/sperren": "Wartung",

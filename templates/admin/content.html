@@ -6,20 +6,25 @@
     <p class="lead">Texte, FAQ und Bilder der Website. Preise, MwSt., Modelle und Extras bleiben im Katalog und unter Einstellungen. Platzhalter: {vat} {cancel} {email} {phone} {company}.</p>
   </div>
 </header>
-<form class="content-form" method="post">
+<form class="content-form" method="post" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
   <section class="panel">
     <h2>Startseite</h2>
     <div class="pair">
       <label>Kicker<input name="hero_kicker" value="{{ settings.hero_kicker }}"></label>
-      <label>Hero-Bild
-        <select name="hero_image">
-          {% for image in images %}
-          <option value="{{ image }}" {% if settings.hero_image == image %}selected{% endif %}>{{ image }}</option>
-          {% endfor %}
-        </select>
-      </label>
+      <div>
+        <label>Hero-Bild (wählen oder hochladen)
+          <select name="hero_image" style="margin-bottom:6px;">
+            {% for image in images %}
+            <option value="{{ image }}" {% if settings.hero_image == image %}selected{% endif %}>{{ image }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label style="font-size:12px; color:#a39890; display:block;">Neues Bild hochladen:
+          <input type="file" name="hero_image_file" accept="image/jpeg,image/png,image/webp" style="margin-top:4px; font-size:12px;">
+        </label>
+      </div>
     </div>
     <label>Überschrift, Zeilenumbruch erlaubt<textarea name="hero_title" rows="2">{{ settings.hero_title }}</textarea></label>
     <label>Unterzeile<textarea name="hero_lede" rows="2">{{ settings.hero_lede }}</textarea></label>
@@ -49,7 +54,12 @@
       {% for step in steps %}
       <div class="repeat step-repeat">
         <input name="step_title" value="{{ step.title }}" placeholder="Titel">
-        <select name="step_image">{% for image in images %}<option value="{{ image }}" {% if step.image == image %}selected{% endif %}>{{ image.split('/')[-1] }}</option>{% endfor %}</select>
+        <div>
+          <select name="step_image" style="margin-bottom:6px;">{% for image in images %}<option value="{{ image }}" {% if step.image == image %}selected{% endif %}>{{ image.split('/')[-1] }}</option>{% endfor %}</select>
+          <label style="font-size:11px; color:#a39890; display:block;">Neues Bild hochladen:
+            <input type="file" name="step_image_file" accept="image/jpeg,image/png,image/webp" style="font-size:11px;">
+          </label>
+        </div>
         <textarea name="step_text" rows="3">{{ step.text }}</textarea>
       </div>
       {% endfor %}

@@ -162,7 +162,8 @@ exports.handler = async (event) => {
       });
       const modelPrice = modelRes.rows.length > 0 ? Number(modelRes.rows[0].price_cents) : 11900;
       const rentCents = modelPrice * nights;
-      const deliveryCents = Number(data.delivery_cents) || 0;
+      const deliveryType = data.delivery_type === 'pickup' ? 'pickup' : 'delivery';
+      const deliveryCents = deliveryType === 'pickup' ? 0 : (Number(data.delivery_cents) || 0);
       let extrasCents = 0;
       if (Array.isArray(data.extras)) {
         for (const ex of data.extras) {
@@ -177,6 +178,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           ok: true,
           nights,
+          delivery_type: deliveryType,
           rent_cents: rentCents,
           delivery_cents: deliveryCents,
           extras_cents: extrasCents,
@@ -209,8 +211,12 @@ exports.handler = async (event) => {
       });
       const model = modelRes.rows[0] || { id: 1, name: 'Model X', slug: 'model-x', price_cents: 11900 };
 
+      const deliveryType = data.delivery_type === 'pickup' ? 'pickup' : 'delivery';
+      const address = deliveryType === 'pickup' ? 'Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)' : (data.address || 'Musterstraße 1');
+      const lat = deliveryType === 'pickup' ? 52.0911 : (parseFloat(data.lat) || 52.52);
+      const lng = deliveryType === 'pickup' ? 12.8711 : (parseFloat(data.lng) || 13.405);
       const rentCents = Number(model.price_cents) * nights;
-      const deliveryCents = Number(data.delivery_cents) || 0;
+      const deliveryCents = deliveryType === 'pickup' ? 0 : (Number(data.delivery_cents) || 0);
       const grossCents = rentCents + deliveryCents;
       const vatCents = Math.round((grossCents * 19) / 119);
 
@@ -218,14 +224,16 @@ exports.handler = async (event) => {
         sql: `INSERT INTO bookings (
                 number, public_token, model_id, model_name, model_slug,
                 start_date, end_date, nights, address, postal_code, city, zone_name,
+                lat, lng, delivery_type,
                 delivery_cents, rent_cents, extras_cents, gross_cents, vat_cents,
                 extras_json, first_name, last_name, email, phone, notes,
                 payment_method, payment_status, status, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, '[]', ?, ?, ?, ?, ?, ?, 'unpaid', 'new', datetime('now'))`,
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, '[]', ?, ?, ?, ?, ?, ?, 'unpaid', 'new', datetime('now'))`,
         args: [
           number, publicToken, Number(model.id), String(model.name), String(model.slug),
           data.start || '2026-10-20', data.end || '2026-10-22', nights,
-          data.address || 'Musterstraße 1', data.postal_code || '10115', data.city || 'Berlin', data.zone_name || 'Zone A',
+          address, data.postal_code || '10115', data.city || 'Berlin', data.zone_name || (deliveryType === 'pickup' ? 'Selbstabholung' : 'Zone A'),
+          lat, lng, deliveryType,
           deliveryCents, rentCents, grossCents, vatCents,
           data.first_name || 'Gast', data.last_name || 'Kunde',
           data.email || 'kunde@example.de', data.phone || '+49 12345678', data.notes || '',

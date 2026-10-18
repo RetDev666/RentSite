@@ -6,11 +6,29 @@
     <h1>{{ booking.first_name }} {{ booking.last_name }}</h1>
     <p class="lead">{{ booking.model_name }} · {{ range_label }}</p>
   </div>
-  <span class="pill {{ booking.status }}">{{ status_labels[booking.status] }}</span>
+  <div style="display:flex; gap:8px; align-items:center;">
+    {% if booking.delivery_type == 'pickup' %}
+    <span class="pill" style="background:#8b5cf6; color:#fff; font-weight:600;">🏪 Selbstabholung</span>
+    {% else %}
+    <span class="pill" style="background:#2563eb; color:#fff; font-weight:600;">🚚 Lieferung</span>
+    {% endif %}
+    <span class="pill {{ booking.status }}">{{ status_labels[booking.status] }}</span>
+  </div>
 </header>
 <div class="split-panels">
   <section class="panel">
     <h2>Auftrag</h2>
+    {% if booking.delivery_type == 'pickup' %}
+    <div style="background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.3); border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+      <strong style="color:#c4b5fd;">🏪 Kostenlose Selbstabholung an der Station</strong><br>
+      <span style="font-size:13px; color:#e2d9d0;">Abholort: Tiefenbrunnen 1, 14929 Treuenbrietzen (PKW mit Führerschein BE &amp; Anhängerkupplung).</span>
+    </div>
+    {% else %}
+    <div style="background:rgba(37,99,235,0.12); border:1px solid rgba(37,99,235,0.3); border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+      <strong style="color:#93c5fd;">🚚 Lieferung an Kundenadresse</strong><br>
+      <span style="font-size:13px; color:#e2d9d0;">Ziel: {{ booking.address }}</span>
+    </div>
+    {% endif %}
     <p><strong>{{ booking.model_name }}</strong><br>{{ range_label }}</p>
     <div id="booking-map" class="pin-map"></div>
     <p class="pin-readout">{{ booking.address }}<br>{{ booking.postal_code }} {{ booking.city }} · {{ booking.zone_name }}</p>
@@ -61,6 +79,22 @@
         {% endfor %}
       </select>
       <button class="btn" type="submit">Speichern</button>
+    </form>
+    <h2>Versandart &amp; Adresse</h2>
+    <form method="post" action="{{ url_for('admin.booking_delivery', booking_id=booking.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Versandart
+        <select name="delivery_type" onchange="const a = document.getElementById('delivery-addr-input'); if(this.value === 'pickup' && (!a.value || a.value.includes('Muster'))) a.value = 'Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)';">
+          <option value="delivery" {% if booking.delivery_type != 'pickup' %}selected{% endif %}>🚚 Lieferung an Wunschort</option>
+          <option value="pickup" {% if booking.delivery_type == 'pickup' %}selected{% endif %}>🏪 Selbstabholung (Treuenbrietzen)</option>
+        </select>
+      </label>
+      <label>Lieferadresse / Abholort
+        <input name="address" id="delivery-addr-input" value="{{ booking.address }}">
+      </label>
+      <input type="hidden" name="lat" value="{{ booking.lat if booking.lat is not none else '' }}">
+      <input type="hidden" name="lng" value="{{ booking.lng if booking.lng is not none else '' }}">
+      <button class="btn" type="submit">Versandart speichern</button>
     </form>
     <h2>Kontakt</h2>
     <form method="post" action="{{ url_for('admin.booking_contact', booking_id=booking.id) }}">

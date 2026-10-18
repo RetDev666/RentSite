@@ -3,8 +3,8 @@ __pycache__/
 data/*.db
 data/*.db-*
 data/secret.key
-static/uploads/*
-!static/uploads/.gitkeep
+# uploads
+static/uploads/*.tmp
 public/
 .netlify/
 .env

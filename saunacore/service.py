@@ -39,13 +39,13 @@ MONTHS_SHORT = [
     "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez.",
 ]
 DEFAULT_SETTINGS = {
-    "company_name": "Saunacore",
-    "owner_name": "Saunacore GmbH",
-    "street": "Musterstraße 1",
-    "postal_code": "10115",
-    "city": "Berlin",
-    "email": "hallo@saunacore.de",
-    "phone": "+49 30 12001890",
+    "company_name": "Amphora-Spa",
+    "owner_name": "Amphora-Spa Berlin-Brandenburg",
+    "street": "Tiefenbrunnen 1",
+    "postal_code": "14929",
+    "city": "Treuenbrietzen",
+    "email": "info@amphora-spa.de",
+    "phone": "+49 176 2033 1535",
     "vat_id": "DE123456789",
     "vat_percent": "19",
     "min_nights": "1",
@@ -53,7 +53,7 @@ DEFAULT_SETTINGS = {
     "cancellation_days": "7",
 }
 EXTRA_DEFAULTS = {
-    "deposit_cents": "0",
+    "deposit_cents": "30000",
     "smtp_host": "",
     "smtp_port": "587",
     "smtp_user": "",
@@ -69,81 +69,74 @@ EXTRA_DEFAULTS = {
 SECRET_KEYS = ("smtp_password", "stripe_secret", "stripe_webhook")
 
 _POINTS = [
-    {"icon": "leaf", "title": "Premium Holz", "text": "Nachhaltiges Thermoholz für optimale Hitze und Langlebigkeit."},
-    {"icon": "truck", "title": "Schnelle Lieferung", "text": "Wir bringen die Sauna direkt an deinen Wunschort."},
-    {"icon": "spark", "title": "Einfache Bedienung", "text": "Intuitive Steuerung für ein ungestörtes Sauna-Erlebnis."},
+    {"icon": "leaf", "title": "Premium Thermoholz", "text": "Nachhaltiges Thermoholz für optimale Wärmedämmung und reinen Saunaduft."},
+    {"icon": "truck", "title": "Lieferung & Abholung", "text": "Bequeme Lieferung direkt zu dir nach Hause oder kostenlose Selbstabholung in Treuenbrietzen."},
+    {"icon": "spark", "title": "Hydro- & Air-Massage", "text": "Leistungsstarke Whirlpool-Massagedüsen und stimmungsvolle LED-Beleuchtung im Hot Tub."},
 ]
 _STEPS = [
     {
         "title": "Auswählen",
-        "text": "Wähle dein Modell, den Zeitraum und setze die Markierung auf der Karte. Preis und Verfügbarkeit siehst du sofort.",
-        "image": "/static/images/choose.jpg",
+        "text": "Wähle dein Wunschmodell (Badefass, Panoramasauna oder Kombi) und den Zeitraum. Preis und Verfügbarkeit siehst du sofort.",
+        "image": "/static/uploads/badefass-1.jpg",
     },
     {
-        "title": "Wir liefern",
-        "text": "Unser Team bringt die Sauna pünktlich an den markierten Ort, stellt sie sicher auf und gibt dir eine kurze Einweisung.",
-        "image": "/static/images/deliver.jpg",
+        "title": "Lieferung oder Abholung",
+        "text": "Wir bringen die Sauna an deinen Wunschort oder du holst den Anhänger kostenlos in Treuenbrietzen ab (PKW mit Führerschein BE).",
+        "image": "/static/uploads/kombi-1.jpg",
     },
     {
-        "title": "Entspannen",
-        "text": "Lehne dich zurück und genieße dein privates Spa-Erlebnis. Nach Ablauf der Zeit holen wir die Sauna wieder ab. Storno ist bis {cancel} Tage vorher kostenlos.",
-        "image": "/static/images/relax.jpg",
+        "title": "Entspannen & Genießen",
+        "text": "Lehne dich zurück und genieße dein privates Spa-Erlebnis unter freiem Himmel. Nach Ablauf holen wir die Sauna wieder ab.",
+        "image": "/static/uploads/fasssauna-1.jpg",
     },
 ]
 _PREVIOUS_FAQ = [
-    {"q": "Wie wird der Preis berechnet?", "a": "Tagessatz mal Nächte, plus die Lieferzone der Markierung, plus Extras. Eine Nacht ist der Abstand zwischen Anreise und Abreise. Die MwSt. von {vat}% ist enthalten."},
-    {"q": "Wann ist die Lieferung kostenlos?", "a": "Zone A, standardmäßig Berlin, ist kostenlos. Andere Zonen haben einen festen Preis. Beides steht vor dem Abschluss und lässt sich im Admin ändern."},
-    {"q": "Kann derselbe Tag zweimal vergeben werden?", "a": "Nein. Jedes Modell ist ein Gerät. Belegte Nächte und Sperrzeiten sind im Kalender blockiert. Der Abreisetag kann die nächste Anreise sein."},
-    {"q": "Wie storniere ich?", "a": "Bis {cancel} Tage vor Mietbeginn ist die Stornierung kostenlos. Schreib an {email} oder lass den Status im Admin auf Storniert setzen. Der Zeitraum wird dann wieder frei."},
-    {"q": "Welche Zahlung gibt es?", "a": "Kreditkarte, PayPal und Rechnung. In dieser Installation wird keine echte Abbuchung ausgelöst. Der Admin sieht den Zahlungsstatus und kann eine Rechnung als bezahlt markieren."},
+    {"q": "Wie wird der Preis berechnet?", "a": "Tagessatz mal Nächte, plus eventuelle Lieferung (0 € bei Selbstabholung), plus Extras. Die MwSt. von {vat}% ist enthalten."},
+    {"q": "Wann ist die Lieferung kostenlos?", "a": "Kostenlose Selbstabholung ab Treuenbrietzen (14929) oder Zone A. Andere Gebiete berechnen wir nach Entfernung."},
 ]
 _FAQ = [
-    {"q": "Wie wird der Preis berechnet?", "a": "Tagessatz mal Nächte, plus die Lieferzone der Markierung, plus Extras, plus eine Kaution, falls sie hinterlegt ist, abzüglich eines gültigen Gutscheins. Eine Nacht ist der Abstand zwischen Anreise und Abreise. Die MwSt. von {vat}% ist enthalten."},
-    {"q": "Wann ist die Lieferung kostenlos?", "a": "Zone A, standardmäßig Berlin, ist kostenlos. Andere Zonen haben einen festen Preis. Beides steht vor dem Abschluss und lässt sich im Admin ändern."},
-    {"q": "Kann derselbe Tag zweimal vergeben werden?", "a": "Nur so oft, wie Geräte dieses Modells hinterlegt sind. Standard ist ein Gerät. Eine Sperrzeit blockiert das ganze Modell. Der Abreisetag kann die nächste Anreise sein."},
-    {"q": "Wie storniere ich?", "a": "Bis {cancel} Tage vor Mietbeginn ist die Stornierung kostenlos. Unter Buchung finden gibst du Bestellnummer und E-Mail ein und stornierst selbst. Danach bleibt der Zeitraum belegt, bis der Status geändert wird."},
-    {"q": "Wann kommt die Sauna?", "a": "Du wählst Vormittag, Nachmittag oder ein flexibles Fenster. Das ist ein Wunsch. Die genaue Uhrzeit stimmen wir danach ab."},
-    {"q": "Gibt es eine Kaution?", "a": "Nur wenn in den Einstellungen ein Betrag steht. Er ist im Endpreis enthalten und in der Übersicht als eigene Zeile sichtbar. Steht dort nichts, gibt es keine Kaution."},
-    {"q": "Welche Zahlung gibt es?", "a": "Kreditkarte, PayPal und Rechnung. Ohne Zahlungsdienstleister wird keine echte Abbuchung ausgelöst. Der Admin sieht den Zahlungsstatus und kann eine Rechnung als bezahlt markieren."},
+    {"q": "Wie wird der Preis berechnet?", "a": "Tagessatz mal Nächte, plus eventuelle Lieferung (0 € bei Selbstabholung), plus Extras und die Kaution von 300 € (in bar bei Übergabe). Die MwSt. von {vat}% ist enthalten."},
+    {"q": "Was kostet die Lieferung?", "a": "Kostenlose Selbstabholung ab Treuenbrietzen (14929). Bei Lieferung berechnen wir je nach Modell 1 bis 2 Euro pro gefahrenem Kilometer."},
+    {"q": "Was benötige ich für die Selbstabholung?", "a": "Ein Auto mit Anhängerkupplung sowie einen PKW-Führerschein der Klasse BE. Der Anhänger ist vollständig zugelassen und fahrbereit."},
+    {"q": "Was brauche ich vor Ort?", "a": "Für das Badefass einen normalen Gartenschlauch mit Wasseranschluss und Brennholz. Für Sauna und Beleuchtung genügt eine normale 230V-Steckdose."},
+    {"q": "Gibt es Brennholz dazu?", "a": "Optional bieten wir trockenes, ofenfertiges Brennholz sauber verpackt für 10,00 € je Kiste an."},
+    {"q": "Wie hoch ist die Kaution?", "a": "Die Kaution beträgt 300 € bei Übergabe in bar und wird bei ordnungsgemäßer Rückgabe sofort erstattet."},
+    {"q": "Welche Zahlung gibt es?", "a": "Kreditkarte, PayPal und Barzahlung bei Übergabe / Rechnung."},
 ]
 _PREVIOUS_PRIVACY = (
-    "Für eine Buchung speichern wir Name, E-Mail, Telefon, den markierten Lieferort, Zeitraum, gewähltes Modell, Extras und die Zahlungsart. Bei Karte speichern wir Marke, Ablauf und die letzten vier Stellen. Die volle Kartennummer und der CVC werden nicht gespeichert.\n\n"
-    "Nachrichten aus dem Formular bleiben in der Admin-Oberfläche, bis sie gelöscht werden.\n\n"
+    "Für eine Buchung speichern wir Name, E-Mail, Telefon, den markierten Lieferort, Zeitraum, gewähltes Modell, Extras und die Zahlungsart.\n\n"
     "Buchungen bleiben erhalten, damit Verfügbarkeit und Nachweise stimmen. Eine Löschanfrage richtest du an {email}."
 )
 _PREVIOUS_TERMS = (
     "Vertragspartner ist {company}. Der Vertrag kommt zustande, wenn die Buchung eine Bestellnummer erhält.\n\n"
-    "Es gilt der Preis, der im letzten Schritt vor dem Absenden angezeigt wird: Tagessatz mal Nächte, plus Lieferung der erkannten Zone, plus gewählte Extras. Enthalten ist die MwSt. von {vat}%.\n\n"
     "Die Sauna bleibt Eigentum von {company}. Sie ist pfleglich zu behandeln und zum vereinbarten Abreisetag bereitzuhalten."
 )
 _PREVIOUS_RENTAL = (
     "Eine Nacht läuft von der Anreise bis zur Abreise. Der Abreisetag ist für die nächste Buchung frei.\n\n"
-    "Kostenlose Stornierung ist bis {cancel} Tage vor Mietbeginn möglich. Danach bleibt der gebuchte Betrag bestehen, sofern nichts anderes vereinbart wird.\n\n"
-    "Die Lieferung erfolgt an die gesetzte Markierung, wenn sie in einer aktiven Zone liegt. Außerhalb des Liefergebiets ist keine Buchung möglich.\n\n"
-    "Brennholz der Grundausstattung, soweit beim Modell genannt, ist enthalten. Weitere Mengen buchst du als Extra."
+    "Kostenlose Stornierung ist bis {cancel} Tage vor Mietbeginn möglich. Kaution: 300 € bei Übergabe in bar."
 )
 CONTENT_DEFAULTS = {
-    "hero_kicker": "Saunacore",
-    "hero_title": "Premium Sauna\non Demand",
-    "hero_lede": "Deine private Sauna. Geliefert. Wo und wann du willst.",
-    "hero_image": "/static/images/hero.jpg",
+    "hero_kicker": "Amphora-Spa Berlin-Brandenburg",
+    "hero_title": "Mobile Wellness auf Rädern\nFasssauna & Badefass",
+    "hero_lede": "Hot Tubs & Fasssaunen direkt an deinen Wunschort geliefert oder zur flexiblen Selbstabholung in Treuenbrietzen.",
+    "hero_image": "/static/uploads/fasssauna-1.jpg",
     "fleet_title": "Unsere Flotte",
-    "fleet_text": "Exklusive Modelle für jedes Bedürfnis. Höchste Qualität, kompromissloses Design.",
+    "fleet_text": "Mobiles Badefass mit Whirlpool, Fasssauna mit Vorraum oder das exklusive Kombi-Spa auf einem Anhänger.",
     "fleet_page_title": "Wähle dein mobiles Wellness-Erlebnis.",
-    "fleet_page_text": "Luxuriöse Fasssaunen, geliefert an deinen Wunschort. Kompromisslose Qualität für tiefste Entspannung.",
+    "fleet_page_text": "Luxuriöse Fasssaunen aus nachhaltigem Thermoholz und beheizbare Badefässer mit Massage. Berlin & Brandenburg.",
     "how_kicker": "So funktioniert's",
-    "how_title": "Drei Schritte bis zur eigenen Sauna.",
-    "how_lede": "Modell wählen, Termin festlegen, Markierung setzen, geliefert bekommen. Abholung inklusive.",
-    "prices_title": "Klare Tagessätze, Lieferung nach Zone.",
-    "prices_text": "Alle Preise sind Endpreise inklusive {vat}% MwSt. Die Miete rechnet sich pro Nacht, von der Anreise bis zur Abreise. Modelle, Extras, Zonen und der Steuersatz kommen aus der Admin-Oberfläche.",
-    "contact_title": "Schreib uns.",
-    "contact_text": "Fragen zu Lieferung, Modellen oder einem bestehenden Termin.",
-    "footer_line": "Luxury Mobile Saunas.",
-    "impressum_note": "Angaben pflegst du in der Admin-Oberfläche unter Einstellungen. Dieses Impressum ist eine Vorlage und ersetzt keine rechtliche Prüfung.",
-    "corporate_text": "Für Teams, Events und mehrere Geräte: schreibt uns mit Zeitraum, Personenzahl und Lieferort. Im Checkout kannst du Firma und USt-IdNr. angeben. Der Preis bleibt der ausgewiesene Endpreis.",
-    "privacy_text": "Für eine Buchung speichern wir Name, E-Mail, Telefon, den markierten Lieferort mit Koordinaten, Zeitraum, gewähltes Modell, Extras, Lieferfenster, optionale Firma und die Zahlungsart. Bei der Demo-Karte speichern wir Marke, Ablauf und die letzten vier Stellen. Die volle Kartennummer und der CVC werden nicht gespeichert. Ist ein Zahlungsdienstleister eingerichtet, läuft die Zahlung dort. Wir speichern dann nur die Sitzungskennung.\n\nDie Karte lädt erst nach dem Klick auf Karte laden. Danach holt der Browser Kacheln von OpenStreetMap. Die Adresse zur Markierung ermitteln wir zur Zuordnung der Lieferzone. Die Zustimmung bleibt in diesem Browser.\n\nNachrichten aus dem Formular bleiben in der Admin-Oberfläche, bis sie gelöscht werden. Eine Antwort speichern wir dort. Ein Versand per E-Mail erfolgt nur, wenn ein Mailserver eingerichtet ist.\n\nBuchungen bleiben erhalten, damit Verfügbarkeit und Nachweise stimmen. Eine Löschanfrage richtest du an {email}. Die Bestellseite erreichst du mit Bestellnummer und derselben E-Mail.",
-    "terms_text": "Vertragspartner ist {company}. Der Vertrag kommt zustande, wenn die Buchung eine Bestellnummer erhält.\n\nEs gilt der Preis, der im letzten Schritt vor dem Absenden angezeigt wird: Tagessatz mal Nächte, plus Lieferung der erkannten Zone, plus gewählte Extras, plus eine Kaution, sofern sie hinterlegt ist, abzüglich eines gültigen Gutscheins. Enthalten ist die MwSt. von {vat}%. Die Kaution ist Teil des angezeigten Endpreises.\n\nDie Sauna bleibt Eigentum von {company}. Sie ist pfleglich zu behandeln und zum vereinbarten Abreisetag bereitzuhalten. Eine optionale Firmenangabe ändert den ausgewiesenen Preis nicht. Diese Texte sind eine Vorlage und ersetzen keine rechtliche Prüfung.",
-    "rental_text": "Eine Nacht läuft von der Anreise bis zur Abreise. Der Abreisetag ist für die nächste Buchung frei.\n\nKostenlose Stornierung ist bis {cancel} Tage vor Mietbeginn möglich, über die Bestellseite mit Bestellnummer und E-Mail. Danach bleibt der gebuchte Betrag bestehen, sofern nichts anderes vereinbart wird. Laufende und abgeschlossene Mieten lassen sich dort nicht mehr stornieren.\n\nDie Lieferung erfolgt an die gesetzte Markierung, wenn sie in einer aktiven Zone liegt. Außerhalb des Liefergebiets ist keine Buchung möglich. Ein Lieferfenster ist eine Wunschangabe.\n\nZufahrt, Stellfläche und eine Person zur Übergabe bestätigst du vor dem Abschluss. Brennholz der Grundausstattung, soweit beim Modell genannt, ist enthalten. Weitere Mengen buchst du als Extra.",
+    "how_title": "Drei Schritte bis zu deinem privaten Spa.",
+    "how_lede": "Modell wählen, Zeitraum festlegen, Lieferung an Wunschort oder kostenlose Selbstabholung.",
+    "prices_title": "Faire Tagessätze & transparente Wochenendpreise.",
+    "prices_text": "Wochentags ab 85 €, Wochenende (Fr–So) ab 250 €. Alle Preise sind Endpreise inklusive {vat}% MwSt. Kaution: 300 € bei Übergabe in bar.",
+    "contact_title": "Kontaktiere uns.",
+    "contact_text": "Fragen zu Lieferung, Modellen, Selbstabholung oder Kauf. Telefon, WhatsApp & Telegram: +49 176 2033 1535 oder +49 176 4164 4019.",
+    "footer_line": "Amphora-Spa · Mobile Fasssauna & Badefass Mieten und Kaufen.",
+    "impressum_note": "Angaben pflegst du in der Admin-Oberfläche unter Einstellungen. Standort & Ausstellung: Tiefenbrunnen 1, 14929 Treuenbrietzen.",
+    "corporate_text": "Für Teams, Events und Feiern: schreibt uns mit Zeitraum, Personenzahl und Lieferort. Im Checkout kannst du Firma und USt-IdNr. angeben.",
+    "privacy_text": "Für eine Buchung speichern wir Name, E-Mail, Telefon, den markierten Lieferort mit Koordinaten, Zeitraum, gewähltes Modell, Extras, Lieferfenster und Zahlungsart.\n\nBuchungen bleiben erhalten, damit Verfügbarkeit und Nachweise stimmen. Eine Löschanfrage richtest du an {email}.",
+    "terms_text": "Vertragspartner ist {company} (Inhaber: Amphora-Spa Berlin-Brandenburg, Tiefenbrunnen 1, 14929 Treuenbrietzen). Der Vertrag kommt zustande, wenn die Buchung eine Bestellnummer erhält.\n\nEs gilt der Preis, der im letzten Schritt vor dem Absenden angezeigt wird. Enthalten ist die MwSt. von {vat}%. Kaution von 300 € wird bei Übergabe fällig.\n\nDie Sauna und das Badefass bleiben Eigentum von {company}. Sie sind pfleglich zu behandeln und zum vereinbarten Abreisetag bereitzuhalten.",
+    "rental_text": "Eine Nacht läuft von der Anreise bis zur Abreise. Der Abreisetag ist für die nächste Buchung frei.\n\nKostenlose Stornierung ist bis {cancel} Tage vor Mietbeginn möglich über die Bestellseite mit Bestellnummer und E-Mail.\n\nBei Selbstabholung ist ein Auto mit Anhängerkupplung und Führerschein Klasse BE erforderlich. Bei Lieferung wird eine Pauschale von 1 bis 2 € je Kilometer berechnet. Kaution: 300 € in bar bei Übergabe.",
     "points_json": json.dumps(_POINTS, ensure_ascii=False),
     "steps_json": json.dumps(_STEPS, ensure_ascii=False),
     "faq_json": json.dumps(_FAQ, ensure_ascii=False),
@@ -946,7 +939,13 @@ def quote_from_payload(db, data: dict, allow_past=False) -> dict:
         raise QuoteError("Anfrage ist ungültig.")
     start = parse_iso(str(data.get("start") or ""))
     end = parse_iso(str(data.get("end") or ""))
-    address, lat, lng = resolve_location(data)
+    delivery_type = "pickup" if data.get("delivery_type") == "pickup" else "delivery"
+    if delivery_type == "pickup":
+        address = "Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)"
+        lat = 52.0911
+        lng = 12.8711
+    else:
+        address, lat, lng = resolve_location(data)
     result = build_quote(
         db,
         model_id=data.get("model_id"),
@@ -956,9 +955,23 @@ def quote_from_payload(db, data: dict, allow_past=False) -> dict:
         extras=data.get("extras") or [],
         allow_past=allow_past,
     )
+    if delivery_type == "pickup":
+        result["delivery_cents"] = 0
+        result["delivery"] = "kostenlose Selbstabholung"
+        result["zone"] = {"name": "Selbstabholung", "price_cents": 0, "badge": "Abholstation Treuenbrietzen"}
+        result["needs_address"] = False
+        base = result["rent_cents"] + result["extras_cents"]
+        deposit = int(result["deposit_cents"] or 0)
+        gross = base + deposit
+        result["gross_cents"] = gross
+        result["gross"] = format_euro(gross)
+        vat = included_vat(gross, result["vat_percent"])
+        result["vat_cents"] = vat
+        result["vat"] = format_euro(vat)
     result["address"] = address
     result["lat"] = lat
     result["lng"] = lng
+    result["delivery_type"] = delivery_type
     return _apply_voucher(db, result, data.get("voucher_code"))
 
 
@@ -1068,6 +1081,7 @@ def create_booking(db, data: dict, *, allow_past=False, status: str | None = Non
         number = _new_number(db)
         public_token = secrets.token_urlsafe(18)
         created = now()
+        delivery_type = "pickup" if data.get("delivery_type") == "pickup" else "delivery"
         db.execute(
             """
             INSERT INTO bookings (
@@ -1078,8 +1092,8 @@ def create_booking(db, data: dict, *, allow_past=False, status: str | None = Non
                 payment_method, payment_status, card_brand, card_last4, card_exp,
                 status, admin_note, created_at, lat, lng,
                 deposit_cents, voucher_cents, voucher_code, arrival_window,
-                company, company_vat, access_ok, stripe_session
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                company, company_vat, access_ok, stripe_session, delivery_type
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 number,
@@ -1125,6 +1139,7 @@ def create_booking(db, data: dict, *, allow_past=False, status: str | None = Non
                 company_vat,
                 access,
                 "",
+                delivery_type,
             ),
         )
         booking_id = db.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
@@ -1244,7 +1259,14 @@ def save_image(file_storage) -> str:
 
 
 def safe_image_path(path: str) -> bool:
-    return path.startswith("/static/images/") or path.startswith("/static/uploads/")
+    p = str(path or "").strip()
+    return (
+        p.startswith("/static/images/")
+        or p.startswith("/static/uploads/")
+        or p.startswith("http://")
+        or p.startswith("https://")
+        or (p.startswith("/static/") and any(p.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp", ".svg")))
+    )
 
 
 def seed_demo(conn) -> None:
@@ -1286,124 +1308,112 @@ def seed_demo(conn) -> None:
         )
     models = [
         {
-            "slug": "model-s",
-            "name": "Model S",
-            "subtitle": "Die kompakte Fasssauna",
-            "badge": "Kompakt",
-            "price_cents": 8900,
+            "slug": "badefass",
+            "name": "Amphora-Spa Badefass",
+            "subtitle": "Mobiles Badefass Hot Tub mit Hydro- & Airbubble-Massage",
+            "badge": "Bestseller Wellness",
+            "price_cents": 8500,
             "capacity_min": 2,
-            "capacity_max": 4,
-            "size": "kompakt",
-            "features": [
-                {"icon": "users", "label": "2–4 Pers."},
-                {"icon": "flame", "label": "Holzofen"},
-                {"icon": "window", "label": "Türfenster"},
-            ],
-            "specs": [
-                {"icon": "users", "label": "Kapazität", "value": "Bis zu 4 Personen"},
-                {"icon": "eye", "label": "Aussicht", "value": "Türfenster"},
-                {"icon": "flame", "label": "Technik", "value": "Holzofen"},
-            ],
-            "summary": "Unsere kompakte Fasssauna für zwei bis vier Personen. Thermoholz, Holzofen und ein türhohes Fenster — schnell aufgestellt, ruhig im Charakter.",
-            "story_title": "Klein. Warm. Vollständig.",
-            "story": "Model S wird in Handarbeit aus nachhaltigem Thermoholz gefertigt. Das türhohe Fenster hält den Blick nach draußen offen, der Ofen trägt die Hitze gleichmäßig. Sie passt in kleinere Gärten und steht in wenigen Minuten bereit.",
-            "highlights": [
-                "Holzofen mit langer Glut für gleichmäßige Hitze",
-                "Türfenster mit Blick ins Freie",
-                "Kompaktes Maß, das auch in kleinere Gärten passt",
-            ],
-            "images": ["/static/images/model-s.jpg", "/static/images/interior.jpg", "/static/images/wood.jpg", "/static/images/stove.jpg"],
-            "sort_order": 1,
-        },
-        {
-            "slug": "model-x",
-            "name": "Model X",
-            "subtitle": "Der Bestseller",
-            "badge": "Bestseller",
-            "price_cents": 11900,
-            "capacity_min": 4,
             "capacity_max": 6,
             "size": "mittel",
             "features": [
-                {"icon": "users", "label": "4–6 Pers."},
-                {"icon": "flame", "label": "Holzofen"},
-                {"icon": "window", "label": "Halbmond"},
+                {"icon": "spark", "label": "Hydro & Air Massage"},
+                {"icon": "flame", "label": "Außenofen Holz"},
+                {"icon": "users", "label": "Bis zu 6 Pers."},
+                {"icon": "leaf", "label": "LED Beleuchtung"},
             ],
             "specs": [
                 {"icon": "users", "label": "Kapazität", "value": "Bis zu 6 Personen"},
-                {"icon": "eye", "label": "Aussicht", "value": "Halbmond-Fenster"},
-                {"icon": "flame", "label": "Technik", "value": "Holzofen"},
+                {"icon": "spark", "label": "Massagesysteme", "value": "Hydro- & Airbubble-Massage"},
+                {"icon": "flame", "label": "Heizung", "value": "Außenstehender Holzofen auf Anhänger"},
+                {"icon": "leaf", "label": "Licht", "value": "LED Innen- & Außenbeleuchtung"},
+                {"icon": "truck", "label": "Lieferung", "value": "1 € / km oder Selbstabholung"},
+                {"icon": "spark", "label": "Kaution", "value": "300 € bar bei Übergabe"},
             ],
-            "summary": "Die meistgebuchte Fasssauna. Platz für vier bis sechs Personen, ein halbrundes Fenster und ein Ofen, der den Abend trägt.",
-            "story_title": "Der Abend gehört euch.",
-            "story": "Model X verbindet kompakte Logistik mit genug Raum für einen ganzen Freundeskreis. Das Halbmondfenster legt einen warmen Bogen ins Holz, der Ofen hält die Temperatur, ohne dass jemand nachlegen muss.",
+            "summary": "Tauche ein in eine Welt voller Erholung und entspanne in einem heißen Bad unter freiem Himmel zusammen mit Partner, Freunden oder der Familie. Mit dem mobilen Amphora-Spa Badefass holst du dir dein Wellnesserlebnis direkt in den Garten.",
+            "story_title": "Heißes Bad unter freiem Himmel.",
+            "story": "Unser mobiles Amphora-Spa Badefass bietet maximalen Komfort für ca. 6 Personen dank des außenstehenden Holzofens auf dem Anhänger. Ausgestattet mit kraftvollen Hydro- und Airbubble-Massagedüsen sowie stimmungsvoller LED-Atmosphärenbeleuchtung. Wochentags 85 €, Feiertage 95 €, Wochenende (Fr–So) 250 €. Alles was du brauchst, ist ein Wasseranschluss, Gartenschlauch und Brennholz.",
             "highlights": [
-                "Halbmond-Fenster für weiches Licht",
-                "Holzofen mit großer Brennkammer",
-                "Bequem für vier bis sechs Personen",
+                "Außenstehender Holzofen – maximaler Sitzkomfort für 6 Personen",
+                "Hydro-Massage & Airbubble-Massage für pure Tiefenentspannung",
+                "LED-Atmosphären Außenbeleuchtung & LED Innenbeleuchtung mit Farbwechsel",
+                "Mietvertrag & gründliche Einweisung inklusive",
+                "Lieferung (1 €/km) oder kostenlose Selbstabholung mit PKW-Führerschein BE",
             ],
-            "images": ["/static/images/model-x.jpg", "/static/images/interior-2.jpg", "/static/images/stove.jpg", "/static/images/wood.jpg"],
+            "images": [f"/static/uploads/badefass-{i}.jpg" for i in range(1, 17)],
+            "sort_order": 1,
+        },
+        {
+            "slug": "kombi-sauna-badefass",
+            "name": "Amphora-Spa Kombi",
+            "subtitle": "Fasssauna & Badefass Hot Tub auf Tandem-Anhänger",
+            "badge": "Das ultimative Spa",
+            "price_cents": 10000,
+            "capacity_min": 4,
+            "capacity_max": 10,
+            "size": "gross",
+            "features": [
+                {"icon": "users", "label": "Sauna 4 + Fass 6"},
+                {"icon": "flame", "label": "Holzofen & Hot Tub"},
+                {"icon": "leaf", "label": "Premium Thermoholz"},
+                {"icon": "spark", "label": "Licht & Massage"},
+            ],
+            "specs": [
+                {"icon": "users", "label": "Kapazität", "value": "Sauna bis 4 Pers., Badefass bis 6 Pers."},
+                {"icon": "leaf", "label": "Material", "value": "Hochwertiges Thermoholz"},
+                {"icon": "flame", "label": "Heiztechnik", "value": "Holzofen für Sauna und Badefass"},
+                {"icon": "spark", "label": "Ausstattung", "value": "Stromanschluss, Licht und Whirlpool-Düsen"},
+                {"icon": "truck", "label": "Lieferung", "value": "2 € je Kilometer oder Selbstabholung"},
+                {"icon": "spark", "label": "Kaution", "value": "300 € bei Übergabe in bar"},
+            ],
+            "summary": "Hochwertiges Saunafass aus nachhaltigem Thermoholz kombiniert mit einem Hot Tub Badefass auf einem gemeinsamen mobilen Tandem-Anhänger. Das vollendete Spa-Erlebnis für Partys, Feiern und Familie.",
+            "story_title": "Saunieren & Baden in perfekter Harmonie.",
+            "story": "Der Amphora-Spa Kombi-Anhänger vereint eine vollwertige Fasssauna mit einem beheizbaren Hot Tub Badefass. Die Sauna bietet bis zu 4 Personen Platz für wohltuende Aufgüsse, während im Badefass bis zu 6 Personen im heißen Wasser entspannen. Wochentags 120 €, Feiertage 150 €, Wochenende (Fr–So) 320 €. Unvergessliche Wellness direkt bei dir zu Hause.",
+            "highlights": [
+                "Kombinierte Fasssauna (4 Pers.) und Hot Tub Badefass (6 Pers.) auf einem Anhänger",
+                "Hochwertiges Thermoholz für optimale Wärmedämmung und angenehmen Duft",
+                "Schwitzraum mit sicherem Holzofen und Glas-Tür",
+                "Whirlpool-Funktion, Innenbeleuchtung und Thermo-Abdeckung",
+                "Lieferung (2 €/km) oder Selbstabholung mit Führerschein BE",
+            ],
+            "images": [f"/static/uploads/kombi-{i}.jpg" for i in range(1, 17)],
             "sort_order": 2,
         },
         {
-            "slug": "model-xl",
-            "name": "Model XL",
-            "subtitle": "Das Premium-Erlebnis",
-            "badge": "Premium Space",
-            "price_cents": 14900,
-            "capacity_min": 6,
-            "capacity_max": 8,
-            "size": "gross",
-            "features": [
-                {"icon": "users", "label": "6–8 Pers."},
-                {"icon": "bolt", "label": "Elektro/Holz"},
-                {"icon": "door", "label": "Vorraum"},
-            ],
-            "specs": [
-                {"icon": "users", "label": "Kapazität", "value": "Bis zu 8 Personen"},
-                {"icon": "eye", "label": "Aussicht", "value": "Panorama-Fenster"},
-                {"icon": "flame", "label": "Technik", "value": "Premium Bio-Ofen"},
-            ],
-            "summary": "Unsere größte mobile Wohlfühloase. Entwickelt für maximale Entspannung in der Natur, ohne Kompromisse bei Design und Komfort einzugehen. Ausgestattet mit modernster Heiztechnik und rahmenlosem Panoramablick.",
-            "story_title": "Handwerkskunst trifft auf Natur",
-            "story": "Jedes Model XL wird in präziser Handarbeit aus nachhaltigem Thermoholz gefertigt. Dieses spezielle Behandlungsverfahren garantiert nicht nur eine außergewöhnliche Langlebigkeit und Witterungsbeständigkeit, sondern verleiht dem Holz auch seinen charakteristischen, tiefen Duft, der das Spa-Erlebnis abrundet.",
-            "highlights": [
-                "Autarke Stromversorgung über integrierte Batterie für grenzenlose Freiheit",
-                "Indirekte, dimmbare LED-Innenbeleuchtung für die perfekte Atmosphäre",
-                "Inklusive hochwertigem Aufguss-Set, ätherischen Ölen und Brennholz",
-            ],
-            "images": ["/static/images/model-xl.jpg", "/static/images/interior.jpg", "/static/images/relax.jpg", "/static/images/stove.jpg"],
-            "sort_order": 3,
-        },
-        {
-            "slug": "model-panorama",
-            "name": "Model Panorama",
-            "subtitle": "Der Glas-Pavillon",
-            "badge": "Exklusiv",
-            "price_cents": 17900,
-            "capacity_min": 4,
+            "slug": "fasssauna-panorama",
+            "name": "Amphora-Spa Panoramasauna",
+            "subtitle": "Mobile Fasssauna mit Relax-Vorraum auf Anhänger",
+            "badge": "Panorama & Vorraum",
+            "price_cents": 9000,
+            "capacity_min": 2,
             "capacity_max": 6,
-            "size": "gross",
+            "size": "mittel",
             "features": [
-                {"icon": "users", "label": "4–6 Pers."},
-                {"icon": "flame", "label": "Holzofen"},
-                {"icon": "window", "label": "Vollglas"},
+                {"icon": "users", "label": "Bis zu 6 Pers."},
+                {"icon": "window", "label": "Panoramafenster"},
+                {"icon": "door", "label": "Separater Vorraum"},
+                {"icon": "flame", "label": "Harvia Holzofen"},
             ],
             "specs": [
                 {"icon": "users", "label": "Kapazität", "value": "Bis zu 6 Personen"},
-                {"icon": "eye", "label": "Aussicht", "value": "Vollglas"},
-                {"icon": "flame", "label": "Technik", "value": "Holzofen"},
+                {"icon": "door", "label": "Räume", "value": "Schwitzraum & separater Vorraum (Relaxraum)"},
+                {"icon": "window", "label": "Aussicht", "value": "Großes Panorama-Halbmondfenster"},
+                {"icon": "leaf", "label": "Material", "value": "Nachhaltiges Thermoholz"},
+                {"icon": "truck", "label": "Lieferung", "value": "2 € je Kilometer oder Selbstabholung"},
+                {"icon": "spark", "label": "Kaution", "value": "300 € bar bei Übergabe"},
             ],
-            "summary": "Eine Fasssauna mit vollverglaster Front. Der Himmel bleibt sichtbar, die Wärme bleibt drinnen. Für Abende, an denen der Ort genauso wichtig ist wie die Hitze.",
-            "story_title": "Nacht, Glas und Glut",
-            "story": "Model Panorama öffnet die Stirnseite fast vollständig zum Glas. Drinnen bleibt das Thermoholz, draußen Schnee, See oder Garten. Der Holzofen liefert die tiefe, trockene Hitze, die eine Fasssauna ausmacht.",
+            "summary": "Hochwertige mobile Fasssauna aus nachhaltigem Thermoholz mit Schwitzraum und separatem Relax-Vorraum. Platz für bis zu 6 Personen, Stromanschluss, LED-Beleuchtung und atemberaubender Panorama-Ausblick.",
+            "story_title": "Entspannung pur mit Weitblick und Relaxraum.",
+            "story": "Unsere Amphora-Spa Panoramasauna bietet zwei separate Räume: Einen wettergeschützten Vorraum zum Umkleiden und Ausruhen sowie den geräumigen Schwitzraum mit Panoramafenster. Der kräftige Harvia-Holzofen sorgt für authentische finnische Hitze. Wochentags 90 €, Feiertage 100 €, Wochenende (Fr–So) 270 €.",
             "highlights": [
-                "Vollglasfront ohne störenden Rahmen",
-                "Holzofen für tiefe, trockene Hitze",
-                "Exklusive Ausstattung für vier bis sechs Personen",
+                "Zwei Räume: Schwitzraum plus separater Relax- und Umkleidevorraum",
+                "Großes Panorama-Halbmondfenster für traumhafte Ausblicke",
+                "Harvia Holzofen mit Saunasteinen für intensive Aufgüsse",
+                "Stimmungsvolle LED-Beleuchtung und 230V-Stromanschluss",
+                "Lieferung (2 €/km) oder kostenlose Selbstabholung mit Klasse BE",
             ],
-            "images": ["/static/images/model-panorama.jpg", "/static/images/relax.jpg", "/static/images/interior-2.jpg", "/static/images/wood.jpg"],
-            "sort_order": 4,
+            "images": [f"/static/uploads/fasssauna-{i}.jpg" for i in range(1, 20)],
+            "sort_order": 3,
         },
     ]
     for item in models:
@@ -1478,11 +1488,12 @@ def seed_demo(conn) -> None:
     create_booking(
         conn,
         {
-            "model_id": model_ids["model-xl"],
+            "model_id": model_ids.get("fasssauna-panorama") or list(model_ids.values())[0],
+            "delivery_type": "delivery",
             "start": (today + timedelta(days=8)).isoformat(),
             "end": (today + timedelta(days=11)).isoformat(),
             "address": "Musterstraße 12, 10115 Berlin",
-            "extras": [{"id": extra_ids["extra-kaminholz"], "qty": 1}],
+            "extras": [{"id": extra_ids["extra-kaminholz"], "qty": 1}] if "extra-kaminholz" in extra_ids else [],
             "first_name": "Max",
             "last_name": "Mustermann",
             "email": "max@example.com",
@@ -1498,11 +1509,12 @@ def seed_demo(conn) -> None:
     create_booking(
         conn,
         {
-            "model_id": model_ids["model-x"],
+            "model_id": model_ids.get("kombi-sauna-badefass") or list(model_ids.values())[0],
+            "delivery_type": "delivery",
             "start": (today + timedelta(days=3)).isoformat(),
             "end": (today + timedelta(days=5)).isoformat(),
-            "address": "Hauptstraße 5, 80331 München",
-            "extras": [{"id": extra_ids["vip-endreinigung"], "qty": 1}],
+            "address": "Hauptstraße 5, 14467 Potsdam",
+            "extras": [{"id": extra_ids["vip-endreinigung"], "qty": 1}] if "vip-endreinigung" in extra_ids else [],
             "first_name": "Anna",
             "last_name": "Berger",
             "email": "anna@example.com",
@@ -1515,16 +1527,17 @@ def seed_demo(conn) -> None:
     create_booking(
         conn,
         {
-            "model_id": model_ids["model-s"],
+            "model_id": model_ids.get("badefass") or list(model_ids.values())[0],
+            "delivery_type": "pickup",
             "start": (today - timedelta(days=6)).isoformat(),
             "end": (today - timedelta(days=4)).isoformat(),
-            "address": "Seeweg 2, 14193 Berlin",
+            "address": "Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)",
             "extras": [],
             "first_name": "Jonas",
             "last_name": "Krüger",
             "email": "jonas@example.com",
             "phone": "+49 160 998877",
-            "notes": "",
+            "notes": "Selbstabholung mit Hänger am Nachmittag.",
             "payment_method": "paypal",
             "client_token": "seed-jonas",
         },
@@ -1534,9 +1547,10 @@ def seed_demo(conn) -> None:
     )
     block_start = today + timedelta(days=20)
     block_end = today + timedelta(days=23)
+    target_block_model = model_ids.get("badefass") or list(model_ids.values())[0]
     conn.execute(
         "INSERT INTO blocks (model_id, start_date, end_date, reason) VALUES (?, ?, ?, ?)",
-        (model_ids["model-s"], block_start.isoformat(), block_end.isoformat(), "Wartung Brenner und Dichtungen"),
+        (target_block_model, block_start.isoformat(), block_end.isoformat(), "Wartung Brenner und Dichtungen"),
     )
     conn.execute(
         "INSERT INTO messages (name, email, phone, body, read, created_at) VALUES (?, ?, ?, ?, 0, ?)",
@@ -1544,7 +1558,8 @@ def seed_demo(conn) -> None:
             "Lena Hoffmann",
             "lena@example.com",
             "+49 170 1234567",
-            "Können Sie Model XL auch nach Potsdam liefern, und ist der Vorraum beheizt?",
+            "Können Sie die Panoramasauna auch nach Potsdam liefern, und ist der Vorraum beheizt?",
             now(),
         ),
     )
+

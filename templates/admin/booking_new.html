@@ -19,7 +19,13 @@
     <label>Anreise<input type="date" name="start" required></label>
     <label>Abreise<input type="date" name="end" required></label>
   </div>
-  <div class="stack-label">Lieferort
+  <label>Versandart
+    <select name="delivery_type" id="manual-delivery-type">
+      <option value="delivery">🚚 Lieferung an Wunschort (Kundenadresse)</option>
+      <option value="pickup">🏪 Kostenlose Selbstabholung (14929 Treuenbrietzen)</option>
+    </select>
+  </label>
+  <div class="stack-label" id="manual-map-wrap">Lieferort / Abholstation
     <div id="manual-map" class="pin-map"></div>
     <input type="hidden" name="lat" id="manual-lat">
     <input type="hidden" name="lng" id="manual-lng">
@@ -82,11 +88,13 @@
     const data = new FormData(form);
     const extras = [];
     data.getAll("extra_id").forEach((id) => extras.push({ id: Number(id), qty: Number(data.get("qty_" + id) || 0) }));
+    const deliveryType = data.get("delivery_type") || "delivery";
     const res = await fetch("/api/quote", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
       body: JSON.stringify({
         model_id: Number(data.get("model_id")),
+        delivery_type: deliveryType,
         start: data.get("start"),
         end: data.get("end"),
         address: data.get("address"),
@@ -99,6 +107,22 @@
     preview.textContent = json.ok ? (json.range_label + " · " + (json.zone ? json.zone.badge + " · " : "") + (json.gross || "Lieferung fehlt")) : json.error;
   }
   form.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(refresh, 300); });
+
+  const delTypeSelect = document.getElementById("manual-delivery-type");
+  if (delTypeSelect) {
+    delTypeSelect.addEventListener("change", () => {
+      if (delTypeSelect.value === "pickup") {
+        document.getElementById("manual-address").value = "Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)";
+        document.getElementById("manual-lat").value = "52.0911";
+        document.getElementById("manual-lng").value = "12.8711";
+      } else {
+        document.getElementById("manual-address").value = "";
+        document.getElementById("manual-lat").value = "";
+        document.getElementById("manual-lng").value = "";
+      }
+      refresh();
+    });
+  }
 </script>
 {% endblock %}
 {% block scripts %}

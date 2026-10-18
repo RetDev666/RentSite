@@ -39,11 +39,23 @@
       <div>
         <article class="dark-card">
           <h2>Wohin?</h2>
-          <p class="fine">Klicke auf die Karte oder ziehe die Markierung. Die Adresse und die Lieferzone kommen von diesem Punkt.</p>
+          <div class="delivery-toggle-wrap" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0 16px;">
+            <button type="button" class="btn delivery-type-btn is-active" id="btn-delivery" style="padding:10px 8px; font-size:13px; text-align:center;">
+              🚚 Lieferung an Wunschort
+            </button>
+            <button type="button" class="btn ghost delivery-type-btn" id="btn-pickup" style="padding:10px 8px; font-size:13px; text-align:center;">
+              🏪 Selbstabholung (0 €)
+            </button>
+          </div>
+          <div id="pickup-info-box" style="display:none; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.4); border-radius:8px; padding:12px 14px; margin-bottom:14px; font-size:13px; color:#e2d9d0;">
+            <strong style="color:#c4b5fd;">Station Treuenbrietzen:</strong> Tiefenbrunnen 1, 14929 Treuenbrietzen<br>
+            <span style="font-size:12px; color:#a39890;">Kostenlose Abholung mit eigenem Zugfahrzeug (Anhängerkupplung &amp; Führerscheinklasse BE erforderlich).</span>
+          </div>
+          <p class="fine" id="delivery-fine">Klicke auf die Karte oder ziehe die Markierung. Die Adresse und die Lieferzone kommen von diesem Punkt.</p>
           <div id="pin-map" class="pin-map"></div>
           <p class="pin-readout" id="address">Noch keine Markierung</p>
           <p class="zone-chip" id="zone-badge">Lieferzone nach Markierung</p>
-          <label class="window-pick">Lieferfenster
+          <label class="window-pick" id="window-pick-wrap">Lieferfenster
             <select id="arrival-window">
               <option value="">Bitte wählen</option>
               <option value="vormittag">Vormittag, ca. 8–12 Uhr</option>

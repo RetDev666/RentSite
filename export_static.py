@@ -30,15 +30,9 @@ def main():
     pages = [
         ("/", "index.html"),
         ("/flotte", "flotte/index.html"),
-        ("/flotte/model-s", "flotte/model-s/index.html"),
-        ("/flotte/model-x", "flotte/model-x/index.html"),
-        ("/flotte/model-xl", "flotte/model-xl/index.html"),
         ("/so-funktionierts", "so-funktionierts/index.html"),
         ("/preise", "preise/index.html"),
         ("/kontakt", "kontakt/index.html"),
-        ("/buchen/model-s", "buchen/model-s/index.html"),
-        ("/buchen/model-x", "buchen/model-x/index.html"),
-        ("/buchen/model-xl", "buchen/model-xl/index.html"),
         ("/faq", "faq/index.html"),
         ("/agb", "agb/index.html"),
         ("/datenschutz", "datenschutz/index.html"),
@@ -48,6 +42,14 @@ def main():
         ("/robots.txt", "robots.txt"),
         ("/sitemap.xml", "sitemap.xml"),
     ]
+
+    with app.app_context():
+        from saunacore.db import get_db
+        db = get_db()
+        for row in db.execute("SELECT slug FROM models WHERE active = 1"):
+            slug = row["slug"]
+            pages.append((f"/flotte/{slug}", f"flotte/{slug}/index.html"))
+            pages.append((f"/buchen/{slug}", f"buchen/{slug}/index.html"))
 
     for path, rel_dest in pages:
         res = client.get(path)
