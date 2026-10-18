@@ -250,6 +250,8 @@ exports.handler = async (event) => {
           redirect: `/buchung/finden?success=1&number=${number}`,
         }),
       };
+    }
+
     // -------------------------------------------------------------
     // GET /api/extras - Return all active extras
     // -------------------------------------------------------------
