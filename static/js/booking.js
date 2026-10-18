@@ -5,13 +5,21 @@
   const byId = (id) => document.getElementById(id);
   const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramStart = urlParams.get("start");
+  const paramEnd = urlParams.get("end");
+  const paramAddr = urlParams.get("address");
+  const paramLat = urlParams.get("lat");
+  const paramLng = urlParams.get("lng");
+  const paramDelivery = urlParams.get("delivery_type");
+
   const state = {
-    start: (boot.prefill && boot.prefill.start) || "",
-    end: (boot.prefill && boot.prefill.end) || "",
-    address: (boot.prefill && boot.prefill.address) || "",
-    lat: boot.prefill && boot.prefill.lat ? Number(boot.prefill.lat) : null,
-    lng: boot.prefill && boot.prefill.lng ? Number(boot.prefill.lng) : null,
-    delivery_type: "delivery",
+    start: paramStart || (boot.prefill && boot.prefill.start) || "",
+    end: paramEnd || (boot.prefill && boot.prefill.end) || "",
+    address: paramAddr || (boot.prefill && boot.prefill.address) || "",
+    lat: paramLat ? Number(paramLat) : (boot.prefill && boot.prefill.lat ? Number(boot.prefill.lat) : null),
+    lng: paramLng ? Number(paramLng) : (boot.prefill && boot.prefill.lng ? Number(boot.prefill.lng) : null),
+    delivery_type: paramDelivery || "delivery",
     qty: {},
     step: 1,
     quote: null,
@@ -251,6 +259,55 @@
   const pickupInfoBox = byId("pickup-info-box");
   const deliveryFine = byId("delivery-fine");
   const windowPickWrap = byId("window-pick-wrap");
+  const searchInput = byId("map-address-search");
+  const searchBtn = byId("btn-search-address");
+  const searchWrap = byId("map-search-wrap");
+
+  async function searchAddress() {
+    if (!searchInput) return;
+    const query = searchInput.value.trim();
+    if (!query) return;
+    showError("");
+    if (searchBtn) {
+      searchBtn.disabled = true;
+      searchBtn.textContent = "Suche...";
+    }
+    try {
+      const res = await fetch("/api/geocode?q=" + encodeURIComponent(query));
+      const data = await res.json();
+      if (!data.ok) {
+        showError(data.error || "Adresse nicht gefunden.");
+        return;
+      }
+      state.lat = data.lat;
+      state.lng = data.lng;
+      state.address = data.address;
+      showPlace(data.address);
+      byId("zone-badge").textContent = data.zone ? data.zone.badge : "Außerhalb des Liefergebiets";
+      if (pinMap) {
+        if (pinMap.place) pinMap.place(data.lat, data.lng, true);
+        if (pinMap.map) pinMap.map.setView([data.lat, data.lng], 14);
+      }
+      scheduleQuote();
+    } catch (_err) {
+      showError("Suche fehlgeschlagen.");
+    } finally {
+      if (searchBtn) {
+        searchBtn.disabled = false;
+        searchBtn.textContent = "Adresse suchen";
+      }
+    }
+  }
+
+  if (searchBtn) searchBtn.addEventListener("click", searchAddress);
+  if (searchInput) {
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        searchAddress();
+      }
+    });
+  }
 
   function setDeliveryMode(mode) {
     state.delivery_type = mode;
@@ -260,6 +317,7 @@
       if (pickupInfoBox) pickupInfoBox.style.display = "block";
       if (deliveryFine) deliveryFine.style.display = "none";
       if (windowPickWrap) windowPickWrap.style.display = "none";
+      if (searchWrap) searchWrap.style.display = "none";
 
       state.lat = 52.0911;
       state.lng = 12.8711;
@@ -277,6 +335,7 @@
       if (pickupInfoBox) pickupInfoBox.style.display = "none";
       if (deliveryFine) deliveryFine.style.display = "block";
       if (windowPickWrap) windowPickWrap.style.display = "block";
+      if (searchWrap) searchWrap.style.display = "flex";
 
       if (state.address && state.address.includes("Treuenbrietzen")) {
         state.address = "";
@@ -291,6 +350,7 @@
 
   if (btnDelivery) btnDelivery.addEventListener("click", () => setDeliveryMode("delivery"));
   if (btnPickup) btnPickup.addEventListener("click", () => setDeliveryMode("pickup"));
+  if (state.delivery_type === "pickup") setDeliveryMode("pickup");
 
   document.querySelectorAll(".extra-card").forEach((card) => {
     const id = Number(card.dataset.extraId);
@@ -363,32 +423,68 @@
       renderSummary();
       return null;
     }
-    const response = await fetch("/api/quote", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRF-Token": boot.csrf },
-      body: JSON.stringify({
-        model_id: boot.model.id,
-        delivery_type: state.delivery_type || "delivery",
-        start: state.start,
-        end: state.end,
-        address: state.address.trim(),
-        lat: state.lat,
-        lng: state.lng,
-        extras: chosenExtras(),
-        voucher_code: (byId("voucher") && byId("voucher").value.trim()) || "",
-      }),
-    });
-    const data = await response.json();
-    if (!data.ok) {
-      state.quote = null;
-      showError(data.error);
+    try {
+      const response = await fetch("/api/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": boot.csrf },
+        body: JSON.stringify({
+          model_id: boot.model.id,
+          model_slug: boot.model.slug,
+          delivery_type: state.delivery_type || "delivery",
+          start: state.start,
+          end: state.end,
+          address: state.address.trim(),
+          lat: state.lat,
+          lng: state.lng,
+          extras: chosenExtras(),
+          voucher_code: (byId("voucher") && byId("voucher").value.trim()) || "",
+        }),
+      });
+      const data = await response.json();
+      if (!data.ok) {
+        state.quote = null;
+        showError(data.error);
+        renderSummary();
+        return null;
+      }
+
+      // Defensive fallbacks for formatted labels and prices
+      if (data.gross_cents != null && !data.gross) {
+        data.gross = (data.gross_cents / 100).toFixed(2).replace(".", ",") + " €";
+      }
+      if (data.rent_cents != null && !data.rent) {
+        data.rent = (data.rent_cents / 100).toFixed(2).replace(".", ",") + " €";
+      }
+      if (data.delivery_cents != null && !data.delivery) {
+        data.delivery = data.delivery_cents === 0 ? "kostenlos" : ((data.delivery_cents / 100).toFixed(2).replace(".", ",") + " €");
+      }
+      if (data.vat_cents != null && !data.vat) {
+        data.vat = (data.vat_cents / 100).toFixed(2).replace(".", ",") + " €";
+      }
+      if (!data.rent_label) {
+        data.rent_label = (data.nights === 1 ? "1 Tag" : data.nights + " Tage") + " Miete";
+      }
+      if (!data.delivery_label) {
+        data.delivery_label = state.delivery_type === "pickup" ? "Selbstabholung (0 €)" : "Lieferung";
+      }
+      if (!data.model_name) {
+        data.model_name = boot.model.name;
+      }
+      if (!data.range_label) {
+        data.range_label = data.nights === 1 ? "1 Nacht" : data.nights + " Nächte";
+      }
+      if (state.delivery_type === "pickup") {
+        data.needs_address = false;
+      }
+
+      state.quote = data;
+      showError("");
       renderSummary();
+      return data;
+    } catch (err) {
+      console.error("Quote error:", err);
       return null;
     }
-    state.quote = data;
-    showError("");
-    renderSummary();
-    return data;
   }
 
   function windowValue() {
@@ -406,17 +502,27 @@
       showError("Bitte An- und Abreise wählen.");
       return;
     }
-    if (!windowValue()) {
+    if (state.delivery_type !== "pickup" && !windowValue()) {
       showError("Bitte wähle ein Lieferfenster.");
       return;
     }
-    if (state.lat == null || state.lng == null || state.address.trim().length < 5) {
-      showError("Bitte setze die Markierung auf der Karte.");
-      return;
+    if (state.delivery_type !== "pickup") {
+      if (state.lat == null || state.lng == null || !state.address || state.address.trim().length < 5) {
+        showError("Bitte setze die Markierung auf der Karte oder suche deine Adresse.");
+        return;
+      }
     }
     const quote = await runQuote();
-    if (!quote || quote.needs_address || !quote.gross) {
-      if (!byId("error-banner").textContent) showError("Bitte gib eine Lieferadresse im Liefergebiet an.");
+    if (!quote) {
+      if (!byId("error-banner").textContent) showError("Konnte Angebot nicht berechnen. Bitte Daten prüfen.");
+      return;
+    }
+    if (state.delivery_type !== "pickup" && quote.needs_address) {
+      showError("Bitte gib eine Lieferadresse im Liefergebiet an.");
+      return;
+    }
+    if (!quote.gross && !quote.gross_cents) {
+      showError("Bitte Zeitraum und Lieferort prüfen.");
       return;
     }
     goStep(2);
@@ -434,7 +540,7 @@
     if (first.length < 1 || first.length > 60 || last.length < 1 || last.length > 60) return "Bitte gib Vor- und Nachname an.";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Bitte gib eine gültige E-Mail an.";
     if ((phone.match(/\d/g) || []).length < 6) return "Bitte gib eine gültige Telefonnummer an.";
-    if (state.lat == null || state.address.trim().length < 5) return "Bitte setze die Markierung auf der Karte.";
+    if (state.delivery_type !== "pickup" && (state.lat == null || !state.address || state.address.trim().length < 5)) return "Bitte setze die Markierung auf der Karte.";
     return "";
   }
 
@@ -462,7 +568,7 @@
       return;
     }
     const quote = await runQuote();
-    if (!quote || quote.needs_address) {
+    if (!quote || (state.delivery_type !== "pickup" && quote.needs_address)) {
       showError("Bitte prüfe Datum und Lieferadresse.");
       return;
     }

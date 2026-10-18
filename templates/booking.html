@@ -51,7 +51,11 @@
             <strong style="color:#c4b5fd;">Station Treuenbrietzen:</strong> Tiefenbrunnen 1, 14929 Treuenbrietzen<br>
             <span style="font-size:12px; color:#a39890;">Kostenlose Abholung mit eigenem Zugfahrzeug (Anhängerkupplung &amp; Führerscheinklasse BE erforderlich).</span>
           </div>
-          <p class="fine" id="delivery-fine">Klicke auf die Karte oder ziehe die Markierung. Die Adresse und die Lieferzone kommen von diesem Punkt.</p>
+          <p class="fine" id="delivery-fine">Klicke auf die Karte oder gib deine Adresse ein. Die Lieferzone wird automatisch ermittelt.</p>
+          <div id="map-search-wrap" style="display:flex; gap:8px; margin-bottom:10px;">
+            <input type="text" id="map-address-search" placeholder="Adresse oder PLZ suchen (z.B. Potsdam, Berlin, 14929)..." style="flex:1; padding:9px 12px; font-size:14px; background:#181614; border:1px solid rgba(255,244,230,0.15); border-radius:6px; color:#fff;">
+            <button type="button" class="btn btn-sm" id="btn-search-address" style="white-space:nowrap;">Adresse suchen</button>
+          </div>
           <div id="pin-map" class="pin-map"></div>
           <p class="pin-readout" id="address">Noch keine Markierung</p>
           <p class="zone-chip" id="zone-badge">Lieferzone nach Markierung</p>

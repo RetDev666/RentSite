@@ -42,6 +42,53 @@ function verifyToken(token) {
   }
 }
 
+function formatEuro(cents) {
+  return (cents / 100).toFixed(2).replace('.', ',') + ' €';
+}
+
+function zoneBadge(zone) {
+  const price = Number(zone.price_cents) || 0;
+  if (price === 0) return `${zone.name} (kostenlos)`;
+  return `${zone.name} (${formatEuro(price)})`;
+}
+
+function lookupZone(zones, postcode, city, addressStr) {
+  const queryStr = (addressStr || '').toLowerCase();
+  const plz = (postcode || (queryStr.match(/\b\d{5}\b/) || [''])[0]).trim();
+  const c = (city || '').trim().toLowerCase();
+
+  let best = null;
+  let bestLen = -1;
+  let star = null;
+
+  for (const z of zones) {
+    const prefixes = (z.prefixes || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const cities = (z.cities || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+    for (const p of prefixes) {
+      if (p === '*') {
+        star = z;
+        continue;
+      }
+      if (plz && plz.startsWith(p) && p.length > bestLen) {
+        best = z;
+        bestLen = p.length;
+      }
+    }
+
+    if (!best && c) {
+      for (const cityName of cities) {
+        if (cityName !== '*' && (c === cityName || queryStr.includes(cityName)) && cityName.length > bestLen) {
+          best = z;
+          bestLen = cityName.length;
+        }
+      }
+    }
+  }
+
+  return best || star || (zones.length > 0 ? zones[0] : null);
+}
+
 exports.handler = async (event) => {
   const path = (event.path || '').replace(/^.*\/api\/?/, '');
   const method = event.httpMethod || 'GET';
@@ -87,20 +134,9 @@ exports.handler = async (event) => {
     // GET /api/zone
     // -------------------------------------------------------------
     if (path.startsWith('zone')) {
-      const q = (params.q || '').trim().toLowerCase();
-      const res = await db.execute(`SELECT * FROM zones WHERE active = 1 ORDER BY sort_order`);
-      let found = null;
-      for (const z of res.rows) {
-        const cities = (z.cities || '').toLowerCase().split(',').map((s) => s.trim());
-        const prefixes = (z.prefixes || '').split(',').map((s) => s.trim());
-        if (cities.includes(q) || prefixes.some((p) => p && q.startsWith(p))) {
-          found = z;
-          break;
-        }
-      }
-      if (!found && res.rows.length > 0) {
-        found = res.rows[res.rows.length - 1]; // fallback to last zone
-      }
+      const q = (params.q || '').trim();
+      const res = await db.execute('SELECT * FROM zones WHERE active = 1 ORDER BY sort_order, id');
+      const found = lookupZone(res.rows, '', '', q);
       const price = found ? Number(found.price_cents) : 0;
       return {
         statusCode: 200,
@@ -108,9 +144,9 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           ok: true,
           name: found ? found.name : 'Standard',
-          badge: found ? (price === 0 ? `${found.name} (kostenlos)` : `${found.name} (${(price / 100).toFixed(2).replace('.', ',')} €)`) : '',
+          badge: found ? zoneBadge(found) : '',
           price_cents: price,
-          price: price === 0 ? 'kostenlos' : `${(price / 100).toFixed(2).replace('.', ',')} €`,
+          price: price === 0 ? 'kostenlos' : formatEuro(price),
           free: price === 0,
         }),
       };
@@ -122,24 +158,139 @@ exports.handler = async (event) => {
     if (path.startsWith('reverse')) {
       const lat = parseFloat(params.lat) || 52.52;
       const lng = parseFloat(params.lng) || 13.405;
+
+      let address = '';
+      let postcode = '';
+      let city = '';
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1`,
+          {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'AmphoraSpa/1.0 (booking map)',
+              'Accept-Language': 'de',
+            },
+          }
+        );
+        clearTimeout(timeoutId);
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          const addr = geoData.address || {};
+          const road = addr.road || addr.pedestrian || addr.footway || '';
+          const num = addr.house_number || '';
+          const street = [road, num].filter(Boolean).join(' ');
+          city = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
+          postcode = addr.postcode || '';
+          const locality = [postcode, city].filter(Boolean).join(' ');
+          address = [street, locality].filter(Boolean).join(', ') || geoData.display_name || '';
+        }
+      } catch (err) {
+        console.warn('Reverse geocoding warning:', err);
+      }
+
+      if (!address) {
+        address = `Markierung (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      }
+
+      const zoneRes = await db.execute('SELECT * FROM zones WHERE active = 1 ORDER BY sort_order, id');
+      const zone = lookupZone(zoneRes.rows, postcode, city, address);
+      const price = zone ? Number(zone.price_cents) : 0;
+
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           ok: true,
-          address: 'Musterstraße 1, 10115 Berlin',
-          postal_code: '10115',
-          city: 'Berlin',
+          address,
+          postal_code: postcode,
+          city,
           lat,
           lng,
-          zone: {
-            name: 'Zone A',
-            badge: 'Zone A (kostenlos)',
-            free: true,
-            price_cents: 0,
-          },
+          zone: zone
+            ? {
+                id: zone.id,
+                name: zone.name,
+                badge: zoneBadge(zone),
+                free: price === 0,
+                price_cents: price,
+              }
+            : null,
         }),
       };
+    }
+
+    // -------------------------------------------------------------
+    // GET /api/geocode - Forward geocode address or PLZ
+    // -------------------------------------------------------------
+    if (path.startsWith('geocode')) {
+      const q = (params.q || '').trim();
+      if (!q) {
+        return { statusCode: 400, headers, body: JSON.stringify({ ok: false, error: 'Suchbegriff fehlt.' }) };
+      }
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&addressdetails=1&countrycodes=de&limit=1`,
+          {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'AmphoraSpa/1.0 (booking map)',
+              'Accept-Language': 'de',
+            },
+          }
+        );
+        clearTimeout(timeoutId);
+        if (geoRes.ok) {
+          const list = await geoRes.json();
+          if (list && list.length > 0) {
+            const first = list[0];
+            const lat = parseFloat(first.lat);
+            const lng = parseFloat(first.lon);
+            const addr = first.address || {};
+            const road = addr.road || addr.pedestrian || addr.footway || '';
+            const num = addr.house_number || '';
+            const street = [road, num].filter(Boolean).join(' ');
+            const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
+            const postcode = addr.postcode || '';
+            const locality = [postcode, city].filter(Boolean).join(' ');
+            const address = [street, locality].filter(Boolean).join(', ') || first.display_name || '';
+
+            const zoneRes = await db.execute('SELECT * FROM zones WHERE active = 1 ORDER BY sort_order, id');
+            const zone = lookupZone(zoneRes.rows, postcode, city, address);
+            const price = zone ? Number(zone.price_cents) : 0;
+
+            return {
+              statusCode: 200,
+              headers,
+              body: JSON.stringify({
+                ok: true,
+                address,
+                postal_code: postcode,
+                city,
+                lat,
+                lng,
+                zone: zone
+                  ? {
+                      id: zone.id,
+                      name: zone.name,
+                      badge: zoneBadge(zone),
+                      free: price === 0,
+                      price_cents: price,
+                    }
+                  : null,
+              }),
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('Geocode search warning:', err);
+      }
+      return { statusCode: 404, headers, body: JSON.stringify({ ok: false, error: 'Adresse nicht gefunden.' }) };
     }
 
     // -------------------------------------------------------------
@@ -157,35 +308,121 @@ exports.handler = async (event) => {
 
       // Look up model price from Turso
       const modelRes = await db.execute({
-        sql: `SELECT price_cents FROM models WHERE id = ? OR slug = ? LIMIT 1`,
-        args: [modelId, data.model_slug || 'model-x'],
+        sql: `SELECT id, name, slug, price_cents FROM models WHERE id = ? OR slug = ? LIMIT 1`,
+        args: [modelId, data.model_slug || 'badefass'],
       });
-      const modelPrice = modelRes.rows.length > 0 ? Number(modelRes.rows[0].price_cents) : 11900;
+      const model = modelRes.rows[0] || { id: 1, name: 'Amphora-Spa Badefass', slug: 'badefass', price_cents: 8500 };
+      const modelPrice = Number(model.price_cents) || 8500;
       const rentCents = modelPrice * nights;
       const deliveryType = data.delivery_type === 'pickup' ? 'pickup' : 'delivery';
-      const deliveryCents = deliveryType === 'pickup' ? 0 : (Number(data.delivery_cents) || 0);
-      let extrasCents = 0;
-      if (Array.isArray(data.extras)) {
-        for (const ex of data.extras) {
-          extrasCents += (Number(ex.price_cents) || 0) * (Number(ex.qty) || 1);
+
+      // Look up zones for delivery pricing
+      const zoneRes = await db.execute('SELECT * FROM zones WHERE active = 1 ORDER BY sort_order, id');
+      let zone = null;
+      let deliveryCents = 0;
+      let deliveryText = 'kostenlos';
+      let deliveryLabel = 'Lieferung';
+      let needsAddress = false;
+
+      if (deliveryType === 'pickup') {
+        deliveryCents = 0;
+        deliveryText = 'kostenlos';
+        deliveryLabel = 'Selbstabholung (0 €)';
+        needsAddress = false;
+      } else {
+        const addrStr = (data.address || '').trim();
+        if (addrStr.length < 5) {
+          needsAddress = true;
+          deliveryText = '—';
+          deliveryLabel = 'Lieferung';
+        } else {
+          zone = lookupZone(zoneRes.rows, data.postal_code, data.city, addrStr);
+          deliveryCents = zone ? Number(zone.price_cents) : (Number(data.delivery_cents) || 0);
+          deliveryText = deliveryCents === 0 ? 'kostenlos' : formatEuro(deliveryCents);
+          deliveryLabel = zone ? `Lieferung (${zone.name})` : 'Lieferung';
+          needsAddress = false;
         }
       }
+
+      // Extras resolution from database
+      const extrasRes = await db.execute('SELECT id, name, kind, price_cents FROM extras WHERE active = 1');
+      const extrasMap = new Map();
+      for (const ex of extrasRes.rows) {
+        extrasMap.set(Number(ex.id), ex);
+      }
+
+      const resolvedExtras = [];
+      let extrasCents = 0;
+      if (Array.isArray(data.extras)) {
+        for (const item of data.extras) {
+          const exId = Number(item.id);
+          const qty = Number(item.qty) || 0;
+          if (qty <= 0) continue;
+          const ex = extrasMap.get(exId);
+          const unitCents = ex ? Number(ex.price_cents) : (Number(item.price_cents) || 0);
+          const lineCents = unitCents * qty;
+          extrasCents += lineCents;
+          resolvedExtras.push({
+            id: exId,
+            name: ex ? String(ex.name) : (item.name || 'Zusatzleistung'),
+            kind: ex ? String(ex.kind) : (item.kind || 'equipment'),
+            qty,
+            unit_cents: unitCents,
+            line_cents: lineCents,
+            line: formatEuro(lineCents),
+          });
+        }
+      }
+
       const grossCents = rentCents + deliveryCents + extrasCents;
       const vatCents = Math.round((grossCents * 19) / 119);
+
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           ok: true,
+          model_id: Number(model.id),
+          model_name: String(model.name),
+          model_slug: String(model.slug),
+          unit: formatEuro(modelPrice),
           nights,
-          delivery_type: deliveryType,
+          start: data.start || new Date().toISOString().slice(0, 10),
+          end: data.end || new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10),
+          range_label: nights === 1 ? '1 Nacht' : `${nights} Nächte`,
           rent_cents: rentCents,
+          rent_label: nights === 1 ? '1 Tag Miete' : `${nights} Tage Miete`,
+          rent: formatEuro(rentCents),
+          delivery_type: deliveryType,
           delivery_cents: deliveryCents,
+          delivery: deliveryText,
+          delivery_label: deliveryLabel,
+          extras: resolvedExtras,
           extras_cents: extrasCents,
-          gross_cents: grossCents,
-          vat_cents: vatCents,
           deposit_cents: 0,
+          deposit: null,
           voucher_cents: 0,
+          voucher_code: '',
+          voucher: null,
+          gross_cents: grossCents,
+          gross: formatEuro(grossCents),
+          vat_cents: vatCents,
+          vat: formatEuro(vatCents),
+          vat_percent: 19,
+          vat_text: 'inkl. 19% MwSt.',
+          needs_address: needsAddress,
+          address: data.address || '',
+          lat: data.lat || null,
+          lng: data.lng || null,
+          zone: zone
+            ? {
+                id: zone.id,
+                name: zone.name,
+                badge: zoneBadge(zone),
+                free: Number(zone.price_cents) === 0,
+                price_cents: Number(zone.price_cents),
+              }
+            : null,
         }),
       };
     }
@@ -207,17 +444,61 @@ exports.handler = async (event) => {
 
       const modelRes = await db.execute({
         sql: `SELECT id, name, slug, price_cents FROM models WHERE id = ? OR slug = ? LIMIT 1`,
-        args: [Number(data.model_id) || 1, data.model_slug || 'model-x'],
+        args: [Number(data.model_id) || 1, data.model_slug || 'badefass'],
       });
-      const model = modelRes.rows[0] || { id: 1, name: 'Model X', slug: 'model-x', price_cents: 11900 };
+      const model = modelRes.rows[0] || { id: 1, name: 'Amphora-Spa Badefass', slug: 'badefass', price_cents: 8500 };
 
       const deliveryType = data.delivery_type === 'pickup' ? 'pickup' : 'delivery';
       const address = deliveryType === 'pickup' ? 'Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)' : (data.address || 'Musterstraße 1');
       const lat = deliveryType === 'pickup' ? 52.0911 : (parseFloat(data.lat) || 52.52);
       const lng = deliveryType === 'pickup' ? 12.8711 : (parseFloat(data.lng) || 13.405);
       const rentCents = Number(model.price_cents) * nights;
-      const deliveryCents = deliveryType === 'pickup' ? 0 : (Number(data.delivery_cents) || 0);
-      const grossCents = rentCents + deliveryCents;
+
+      // Delivery calculation
+      const zoneRes = await db.execute('SELECT * FROM zones WHERE active = 1 ORDER BY sort_order, id');
+      let zone = null;
+      let deliveryCents = 0;
+      let zoneName = deliveryType === 'pickup' ? 'Selbstabholung' : 'Standard';
+
+      if (deliveryType === 'pickup') {
+        deliveryCents = 0;
+      } else {
+        zone = lookupZone(zoneRes.rows, data.postal_code, data.city, address);
+        deliveryCents = zone ? Number(zone.price_cents) : (Number(data.delivery_cents) || 0);
+        if (zone) zoneName = zone.name;
+      }
+
+      // Extras resolution
+      const extrasRes = await db.execute('SELECT id, name, kind, price_cents FROM extras WHERE active = 1');
+      const extrasMap = new Map();
+      for (const ex of extrasRes.rows) {
+        extrasMap.set(Number(ex.id), ex);
+      }
+
+      const resolvedExtras = [];
+      let extrasCents = 0;
+      if (Array.isArray(data.extras)) {
+        for (const item of data.extras) {
+          const exId = Number(item.id);
+          const qty = Number(item.qty) || 0;
+          if (qty <= 0) continue;
+          const ex = extrasMap.get(exId);
+          const unitCents = ex ? Number(ex.price_cents) : (Number(item.price_cents) || 0);
+          const lineCents = unitCents * qty;
+          extrasCents += lineCents;
+          resolvedExtras.push({
+            id: exId,
+            name: ex ? String(ex.name) : (item.name || 'Zusatzleistung'),
+            kind: ex ? String(ex.kind) : (item.kind || 'equipment'),
+            qty,
+            unit_cents: unitCents,
+            line_cents: lineCents,
+            line: formatEuro(lineCents),
+          });
+        }
+      }
+
+      const grossCents = rentCents + deliveryCents + extrasCents;
       const vatCents = Math.round((grossCents * 19) / 119);
 
       await db.execute({
@@ -228,13 +509,14 @@ exports.handler = async (event) => {
                 delivery_cents, rent_cents, extras_cents, gross_cents, vat_cents,
                 extras_json, first_name, last_name, email, phone, notes,
                 payment_method, payment_status, status, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, '[]', ?, ?, ?, ?, ?, ?, 'unpaid', 'new', datetime('now'))`,
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', 'new', datetime('now'))`,
         args: [
           number, publicToken, Number(model.id), String(model.name), String(model.slug),
-          data.start || '2026-10-20', data.end || '2026-10-22', nights,
-          address, data.postal_code || '10115', data.city || 'Berlin', data.zone_name || (deliveryType === 'pickup' ? 'Selbstabholung' : 'Zone A'),
+          data.start || new Date().toISOString().slice(0, 10), data.end || new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10), nights,
+          address, data.postal_code || '14929', data.city || 'Treuenbrietzen', zoneName,
           lat, lng, deliveryType,
-          deliveryCents, rentCents, grossCents, vatCents,
+          deliveryCents, rentCents, extrasCents, grossCents, vatCents,
+          JSON.stringify(resolvedExtras),
           data.first_name || 'Gast', data.last_name || 'Kunde',
           data.email || 'kunde@example.de', data.phone || '+49 12345678', data.notes || '',
           data.payment_method || 'invoice',
