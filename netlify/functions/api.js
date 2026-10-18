@@ -652,7 +652,7 @@ exports.handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
       }
 
-      // POST /api/admin/model - Update model details
+      // POST /api/admin/model - Create or update model
       if (path === 'admin/model') {
         let body = {};
         try {
@@ -660,13 +660,90 @@ exports.handler = async (event) => {
         } catch (_e) {}
         const m = body.model || {};
         if (m.id) {
+          const sets = [
+            'name = ?', 'subtitle = ?', 'badge = ?', 'price_cents = ?',
+            'capacity_min = ?', 'capacity_max = ?', 'summary = ?', 'story_title = ?', 'story = ?'
+          ];
+          const args = [
+            m.name || '', m.subtitle || '', m.badge || '', Number(m.price_cents) || 0,
+            Number(m.capacity_min) || 2, Number(m.capacity_max) || 6,
+            m.summary || '', m.story_title || '', m.story || ''
+          ];
+          if (m.images_json !== undefined) {
+            sets.push('images_json = ?');
+            args.push(typeof m.images_json === 'string' ? m.images_json : JSON.stringify(m.images_json || []));
+          }
+          if (m.active !== undefined) {
+            sets.push('active = ?');
+            args.push(m.active ? 1 : 0);
+          }
+          if (m.size) {
+            sets.push('size = ?');
+            args.push(String(m.size));
+          }
+          args.push(Number(m.id));
           await db.execute({
-            sql: `UPDATE models SET name = ?, subtitle = ?, badge = ?, price_cents = ?, capacity_min = ?, capacity_max = ?, summary = ?, story_title = ?, story = ? WHERE id = ?`,
+            sql: `UPDATE models SET ${sets.join(', ')} WHERE id = ?`,
+            args,
+          });
+        } else if (m.name) {
+          const baseSlug = (m.slug || m.name || 'modell').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          const slug = (baseSlug || 'sauna') + '-' + Date.now().toString(36);
+          const imagesJson = typeof m.images_json === 'string' ? m.images_json : JSON.stringify(m.images_json || ['/static/images/model-x.jpg']);
+          const features = JSON.stringify([
+            { icon: 'users', label: `${m.capacity_min || 2}-${m.capacity_max || 6} Personen` },
+            { icon: 'spark', label: 'Holzofen & Aufguss' },
+            { icon: 'clock', label: 'Schnelle Aufheizzeit' }
+          ]);
+          const specs = JSON.stringify([
+            { icon: 'users', label: 'Kapazität', value: `${m.capacity_min || 2}–${m.capacity_max || 6} Personen` },
+            { icon: 'spark', label: 'Ofen', value: 'Holzbefeuert' },
+            { icon: 'ruler', label: 'Länge', value: 'ca. 2.80 m' }
+          ]);
+          const highlights = JSON.stringify([
+            'Hochwertiges Thermoholz',
+            'Panorama-Glas oder Bullauge',
+            'Inkl. Kaminholz für den ersten Saunagang'
+          ]);
+          await db.execute({
+            sql: `INSERT INTO models (
+              slug, name, subtitle, badge, price_cents, capacity_min, capacity_max, size,
+              features_json, specs_json, summary, story_title, story, highlights_json,
+              images_json, active, sort_order, units
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
-              m.name || '', m.subtitle || '', m.badge || '', Number(m.price_cents) || 0,
-              Number(m.capacity_min) || 2, Number(m.capacity_max) || 4,
-              m.summary || '', m.story_title || '', m.story || '', Number(m.id)
-            ],
+              slug,
+              m.name || '',
+              m.subtitle || 'Mobile Fasssauna aus Thermoholz',
+              m.badge || 'Neu',
+              Number(m.price_cents) || 15000,
+              Number(m.capacity_min) || 2,
+              Number(m.capacity_max) || 6,
+              m.size || 'L',
+              features,
+              specs,
+              m.summary || 'Gemütliche mobile Fasssauna für entspannte Stunden im eigenen Garten oder am See.',
+              m.story_title || 'Entspannung pur vor deiner Haustür',
+              m.story || 'Unsere handgefertigte Fasssauna bietet ein unvergessliches Saunaerlebnis direkt bei dir vor Ort.',
+              highlights,
+              imagesJson,
+              m.active !== undefined ? (m.active ? 1 : 0) : 1,
+              Number(m.sort_order) || 10,
+              1
+            ]
+          });
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
+
+      // POST /api/admin/model/delete - Delete model
+      if (path === 'admin/model/delete') {
+        let body = {};
+        try { body = JSON.parse(event.body || '{}'); } catch (_e) {}
+        if (body.id) {
+          await db.execute({
+            sql: `DELETE FROM models WHERE id = ?`,
+            args: [Number(body.id)],
           });
         }
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };

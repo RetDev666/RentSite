@@ -538,8 +538,13 @@
         <!-- 3. VIEW: MODELLE (FLEET) -->
         <div id="view-models" class="view-pane">
           <div class="card-panel">
-            <h2>Modelle &amp; Flotte (Preise, Texte &amp; Kapazitäten in Turso bearbeiten)</h2>
-            <p style="color:#a39890; font-size:14px; margin-top:-6px; margin-bottom:20px;">Bearbeite hier Tagessätze, Untertitel, Kurzbeschreibung und Stories der Fasssaunen.</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h2 style="margin:0;">Modelle &amp; Flotte (Preise, Fotos &amp; Texte in Turso bearbeiten)</h2>
+                <p style="color:#a39890; font-size:14px; margin:4px 0 0;">Verwalte alle Fasssaunen, lade Fotos hoch, ändere Tagessätze, Kapazitäten und Beschreibungen.</p>
+              </div>
+              <button class="btn btn-sm" onclick="addNewModel()">+ Neue Sauna anlegen</button>
+            </div>
             <div id="models-container"></div>
           </div>
         </div>
@@ -1074,47 +1079,194 @@
       }
     }
 
+    let modelImages = {};
+
+    function renderModelGallery(id) {
+      const imgs = modelImages[id] || [];
+      const el = document.getElementById(`m-gallery-${id}`);
+      if (!el) return;
+      if (imgs.length === 0) {
+        el.innerHTML = '<p style="color:#a39890; font-size:12px; grid-column:1/-1; margin:0; padding:12px 0;">Keine Fotos vorhanden. Lade unten neue Fotos hoch.</p>';
+        return;
+      }
+      el.innerHTML = imgs.map((imgUrl, idx) => `
+        <div style="position:relative; background:#141311; border-radius:6px; overflow:hidden; border:2px solid ${idx === 0 ? '#f59e0b' : 'rgba(255,244,230,0.1)'}; aspect-ratio:4/3; display:flex; flex-direction:column;">
+          <img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">
+          ${idx === 0 ? `<span style="position:absolute; top:4px; left:4px; background:#f59e0b; color:#000; font-size:10px; font-weight:700; padding:2px 6px; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.6);">⭐ Hauptfoto</span>` : ''}
+          <div style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent, rgba(0,0,0,0.85) 40%); display:flex; justify-content:space-between; align-items:center; padding:4px 6px;">
+            ${idx !== 0 ? `<button type="button" onclick="setMainModelImage(${id}, ${idx})" title="Als Hauptfoto setzen" style="background:rgba(245,158,11,0.25); border:1px solid rgba(245,158,11,0.5); color:#f59e0b; font-size:10px; font-weight:600; cursor:pointer; padding:2px 6px; border-radius:3px;">★ Titelbild</button>` : '<span></span>'}
+            <button type="button" onclick="removeModelImage(${id}, ${idx})" title="Foto löschen" style="background:rgba(239,68,68,0.25); border:1px solid rgba(239,68,68,0.5); color:#ef4444; font-size:11px; cursor:pointer; padding:2px 6px; border-radius:3px;">🗑</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function handleModelImageUpload(id, input) {
+      if (!input.files || input.files.length === 0) return;
+      const files = Array.from(input.files);
+      let loaded = 0;
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const maxW = 1200;
+            const maxH = 900;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxW || h > maxH) {
+              if (w / maxW > h / maxH) {
+                h = Math.round((h * maxW) / w);
+                w = maxW;
+              } else {
+                w = Math.round((w * maxH) / h);
+                h = maxH;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+            if (!modelImages[id]) modelImages[id] = [];
+            if (modelImages[id].length === 1 && modelImages[id][0] === '/static/images/model-x.jpg') {
+              modelImages[id] = [];
+            }
+            modelImages[id].push(dataUrl);
+            loaded++;
+            if (loaded === files.length) {
+              renderModelGallery(id);
+              showToast(`${files.length} Foto(s) hinzugefügt! Klicke auf "Änderungen speichern", um sie zu sichern.`);
+            }
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+      input.value = '';
+    }
+
+    function addModelImageUrl(id) {
+      const input = document.getElementById(`m-add-url-${id}`);
+      if (!input || !input.value.trim()) return;
+      const url = input.value.trim();
+      if (!modelImages[id]) modelImages[id] = [];
+      if (modelImages[id].length === 1 && modelImages[id][0] === '/static/images/model-x.jpg') {
+        modelImages[id] = [];
+      }
+      modelImages[id].push(url);
+      input.value = '';
+      renderModelGallery(id);
+      showToast('Bildpfad hinzugefügt! Klicke auf "Änderungen speichern".');
+    }
+
+    function setMainModelImage(id, idx) {
+      if (!modelImages[id] || !modelImages[id][idx]) return;
+      const img = modelImages[id].splice(idx, 1)[0];
+      modelImages[id].unshift(img);
+      renderModelGallery(id);
+      showToast('Hauptfoto geändert! Klicke auf "Änderungen speichern".');
+    }
+
+    function removeModelImage(id, idx) {
+      if (!modelImages[id] || idx < 0 || idx >= modelImages[id].length) return;
+      modelImages[id].splice(idx, 1);
+      renderModelGallery(id);
+      showToast('Foto entfernt! Klicke на "Änderungen speichern".');
+    }
+
     // Render Models
     function renderModels(models) {
+      if (!models || models.length === 0) {
+        document.getElementById('models-container').innerHTML = '<p style="color:#a39890; text-align:center; padding:30px;">Keine Saunen in der Flotte angelegt. Klicke oben auf "+ Neue Sauna anlegen".</p>';
+        return;
+      }
       document.getElementById('models-container').innerHTML = models.map(m => {
-        const img = (JSON.parse(m.images_json || '[]')[0]) || '/static/images/model-x.jpg';
+        let imgs = [];
+        try { imgs = JSON.parse(m.images_json || '[]'); } catch(e) { imgs = []; }
+        if (!Array.isArray(imgs)) imgs = [];
+        if (imgs.length === 0) imgs = ['/static/images/model-x.jpg'];
+        modelImages[m.id] = imgs;
+
         return `
-          <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:10px; padding:22px; margin-bottom:20px;">
-            <div style="display:flex; gap:20px; align-items:flex-start;">
-              <img src="${img}" style="width:140px; height:100px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
-              <div style="flex:1;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                  <div>
-                    <h3 style="margin:0; font-size:22px; color:#fff; font-family:var(--display);">${m.name}</h3>
-                    <small style="color:#a39890;">Slug: ${m.slug}</small>
-                  </div>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:14px; color:#a39890;">Tagessatz: </span>
-                    <input type="number" id="m-price-${m.id}" value="${(m.price_cents/100).toFixed(0)}" style="width:100px; padding:8px 10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:bold; font-size:16px;"> <span style="font-size:15px; font-weight:600;">€</span>
-                  </div>
-                </div>
-                <div class="form-pair">
-                  <div class="form-group"><label>Modell-Name</label><input id="m-name-${m.id}" value="${m.name || ''}"></div>
-                  <div class="form-group"><label>Untertitel</label><input id="m-sub-${m.id}" value="${m.subtitle || ''}"></div>
-                </div>
-                <div class="form-trio">
-                  <div class="form-group"><label>Badge (z.B. Bestseller / Kompakt)</label><input id="m-badge-${m.id}" value="${m.badge || ''}"></div>
-                  <div class="form-group"><label>Kapazität Min (Personen)</label><input type="number" id="m-cap-min-${m.id}" value="${m.capacity_min || 2}"></div>
-                  <div class="form-group"><label>Kapazität Max (Personen)</label><input type="number" id="m-cap-max-${m.id}" value="${m.capacity_max || 6}"></div>
-                </div>
-                <div class="form-group"><label>Kurzbeschreibung (Flotten-Übersicht)</label><textarea id="m-summary-${m.id}" rows="2">${m.summary || ''}</textarea></div>
-                <div class="form-pair">
-                  <div class="form-group"><label>Story Titel</label><input id="m-story-title-${m.id}" value="${m.story_title || ''}"></div>
-                  <div class="form-group"><label>Story Text (Detailseite)</label><textarea id="m-story-${m.id}" rows="2">${m.story || ''}</textarea></div>
-                </div>
-                <div style="text-align:right; margin-top:8px;">
-                  <button class="btn btn-sm" onclick="saveModel(${m.id})">Änderungen für ${m.name} speichern</button>
+          <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:12px; padding:24px; margin-bottom:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+              <div>
+                <h3 style="margin:0; font-size:24px; color:#fff; font-family:var(--display);">${m.name}</h3>
+                <div style="display:flex; gap:12px; align-items:center; margin-top:4px;">
+                  <small style="color:#a39890;">Slug: <code>${m.slug}</code></small>
+                  <label class="check" style="margin:0; font-size:13px; color:#10b981; font-weight:600;">
+                    <input type="checkbox" id="m-active-${m.id}" ${m.active ? 'checked' : ''}> Aktiv auf Website
+                  </label>
                 </div>
               </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:14px; color:#a39890;">Tagessatz: </span>
+                <input type="number" id="m-price-${m.id}" value="${(m.price_cents/100).toFixed(0)}" style="width:110px; padding:8px 10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:bold; font-size:16px;"> <span style="font-size:16px; font-weight:600;">€</span>
+              </div>
+            </div>
+
+            <!-- PHOTOS MANAGEMENT SECTION -->
+            <div style="background:#141311; border:1px solid rgba(255,244,230,0.08); border-radius:8px; padding:16px; margin-bottom:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                <div>
+                  <strong style="color:#fff; font-size:15px;">📷 Fotogalerie dieser Sauna</strong>
+                  <p style="margin:2px 0 0; color:#a39890; font-size:12px;">Das erste Bild (⭐ Hauptfoto) wird auf der Startseite &amp; Flottenkarten angezeigt. Weitere Bilder in der Detailgalerie.</p>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <input type="file" id="m-file-${m.id}" accept="image/jpeg,image/png,image/webp" multiple style="display:none;" onchange="handleModelImageUpload(${m.id}, this)">
+                  <button type="button" class="btn btn-sm" onclick="document.getElementById('m-file-${m.id}').click()" style="padding:6px 12px; font-size:12px;">📷 Fotos vom PC hochladen</button>
+                </div>
+              </div>
+
+              <!-- Gallery grid -->
+              <div id="m-gallery-${m.id}" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; margin-bottom:12px;"></div>
+
+              <!-- Add image path/URL input -->
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input type="text" id="m-add-url-${m.id}" placeholder="Oder Bildpfad hinzufügen (z.B. /static/images/model-xl.jpg oder https://...)" style="flex:1; padding:6px 10px; font-size:12px; background:#1c1a17; border:1px solid rgba(255,244,230,0.12); color:#fff; border-radius:6px;">
+                <button type="button" class="btn btn-sm ghost" onclick="addModelImageUrl(${m.id})" style="padding:6px 10px; font-size:12px;">+ URL Hinzufügen</button>
+              </div>
+            </div>
+
+            <!-- MODEL FIELDS -->
+            <div class="form-pair">
+              <div class="form-group"><label>Modell-Name</label><input id="m-name-${m.id}" value="${m.name || ''}"></div>
+              <div class="form-group"><label>Untertitel (z.B. Für 4–6 Personen mit Kaminofen)</label><input id="m-sub-${m.id}" value="${m.subtitle || ''}"></div>
+            </div>
+            <div class="form-trio">
+              <div class="form-group"><label>Badge (z.B. Bestseller / Neu / Panorama)</label><input id="m-badge-${m.id}" value="${m.badge || ''}"></div>
+              <div class="form-group"><label>Kapazität Min (Personen)</label><input type="number" id="m-cap-min-${m.id}" value="${m.capacity_min || 2}"></div>
+              <div class="form-group"><label>Kapazität Max (Personen)</label><input type="number" id="m-cap-max-${m.id}" value="${m.capacity_max || 6}"></div>
+            </div>
+            <div class="form-group">
+              <label>Größenkategorie</label>
+              <select id="m-size-${m.id}" style="padding:8px 10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px;">
+                <option value="S" ${m.size === 'S' ? 'selected' : ''}>S (Kompakt bis 2 Personen)</option>
+                <option value="M" ${m.size === 'M' ? 'selected' : ''}>M (Mittel bis 4 Personen)</option>
+                <option value="L" ${m.size === 'L' || !m.size ? 'selected' : ''}>L (Groß bis 6 Personen)</option>
+                <option value="XL" ${m.size === 'XL' ? 'selected' : ''}>XL (Panorama bis 8 Personen)</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Kurzbeschreibung (Flotten-Übersicht &amp; Karte)</label><textarea id="m-summary-${m.id}" rows="2">${m.summary || ''}</textarea></div>
+            <div class="form-pair">
+              <div class="form-group"><label>Story Titel (Detailseite)</label><input id="m-story-title-${m.id}" value="${m.story_title || ''}"></div>
+              <div class="form-group"><label>Story Text (Detailseite)</label><textarea id="m-story-${m.id}" rows="3">${m.story || ''}</textarea></div>
+            </div>
+
+            <!-- ACTIONS -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,244,230,0.08);">
+              <button class="btn btn-sm ghost" type="button" onclick="deleteModel(${m.id}, '${(m.name || '').replace(/'/g, "\\'")}')" style="color:#ef4444; border-color:rgba(239,68,68,0.4);">🗑 Sauna löschen</button>
+              <button class="btn" type="button" onclick="saveModel(${m.id})">Änderungen für ${m.name} speichern</button>
             </div>
           </div>
         `;
       }).join('');
+
+      // Mount all galleries
+      models.forEach(m => renderModelGallery(m.id));
     }
 
     async function saveModel(id) {
@@ -1126,9 +1278,12 @@
         badge: document.getElementById(`m-badge-${id}`).value,
         capacity_min: parseInt(document.getElementById(`m-cap-min-${id}`).value) || 2,
         capacity_max: parseInt(document.getElementById(`m-cap-max-${id}`).value) || 6,
+        size: document.getElementById(`m-size-${id}`).value || 'L',
+        active: document.getElementById(`m-active-${id}`).checked ? 1 : 0,
         summary: document.getElementById(`m-summary-${id}`).value,
         story_title: document.getElementById(`m-story-title-${id}`).value,
         story: document.getElementById(`m-story-${id}`).value,
+        images_json: modelImages[id] || []
       };
       const res = await fetch('/api/admin/model', {
         method: 'POST',
@@ -1136,7 +1291,59 @@
         body: JSON.stringify({ model: payload })
       });
       const data = await res.json();
-      if (data.ok) showToast('Modell erfolgreich in Turso gespeichert!');
+      if (data.ok) {
+        showToast('Modell & Fotos erfolgreich in Turso gespeichert!');
+      } else {
+        showToast('Fehler beim Speichern: ' + (data.error || 'Unbekannt'), true);
+      }
+    }
+
+    async function addNewModel() {
+      const name = prompt('Name der neuen Sauna (z.B. Fasssauna Panorama L):');
+      if (!name || !name.trim()) return;
+      const res = await fetch('/api/admin/model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({
+          model: {
+            name: name.trim(),
+            subtitle: 'Mobile Fasssauna aus Thermoholz',
+            badge: 'Neu',
+            price_cents: 15000,
+            capacity_min: 2,
+            capacity_max: 6,
+            size: 'L',
+            active: 1,
+            summary: 'Gemütliche mobile Fasssauna für entspannte Stunden im eigenen Garten oder am See.',
+            story_title: 'Entspannung pur vor deiner Haustür',
+            story: 'Unsere handgefertigte Fasssauna bietet ein unvergessliches Saunaerlebnis direkt bei dir vor Ort.',
+            images_json: ['/static/images/model-x.jpg']
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Neue Sauna "${name}" erfolgreich angelegt!`);
+        loadData();
+      } else {
+        showToast('Fehler beim Anlegen: ' + (data.error || 'Unbekannt'), true);
+      }
+    }
+
+    async function deleteModel(id, name) {
+      if (!confirm(`Möchtest du das Modell "${name || 'Sauna'}" wirklich unwiderruflich löschen?`)) return;
+      const res = await fetch('/api/admin/model/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Modell gelöscht!');
+        loadData();
+      } else {
+        showToast('Fehler beim Löschen: ' + (data.error || 'Unbekannt'), true);
+      }
     }
 
     // Render Extras with photo upload & preview
