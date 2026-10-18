@@ -118,6 +118,8 @@ def create_app(test_config: dict | None = None) -> Flask:
             "money_input": service.money_input,
             "format_dt": service.format_dt,
             "status_labels": service.STATUS_LABELS,
+            "payment_labels": service.PAYMENTS,
+            "window_labels": service.WINDOW_LABELS,
             "kind_labels": service.KIND_LABELS,
             "maps_url": service.maps_url,
             "osm_url": service.osm_url,

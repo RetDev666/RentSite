@@ -89,13 +89,31 @@
           </span>
           <br><small style="color:#a39890;" title="{{ booking.address }}">{{ booking.city or booking.address|truncate(28) }}</small>
           {% endif %}
+          {% if booking.arrival_window %}
+          <br><small style="color:#d4c8bd; font-size:11px;">🕒 {{ window_labels.get(booking.arrival_window, booking.arrival_window) }}</small>
+          {% endif %}
         </td>
         <td>{{ booking.model_name }}</td>
         <td>
           {{ booking.start_date }} – {{ booking.end_date }}<br>
           <small style="color:#a39890;">{{ booking.nights }} Nächte</small>
         </td>
-        <td><strong>{{ euro(booking.gross_cents) }}</strong></td>
+        <td>
+          <strong>{{ euro(booking.gross_cents) }}</strong><br>
+          <small style="color:#a39890;">
+            {% if booking.payment_method == 'cash' %}💵 Bar
+            {% elif booking.payment_method == 'card' %}💳 Karte
+            {% elif booking.payment_method == 'paypal' %}🅿️ PayPal
+            {% else %}📄 Rechnung{% endif %}
+            ·
+            {% if booking.payment_status == 'paid' %}<span style="color:#10b981; font-weight:600;">bezahlt</span>
+            {% elif booking.payment_status == 'simulated' %}<span style="color:#818cf8;">vorgemerkt</span>
+            {% else %}<span style="color:#f59e0b; font-weight:600;">offen</span>{% endif %}
+          </small>
+          {% if booking.voucher_code %}
+          <br><span class="pill" style="font-size:10px; padding:1px 6px; background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); font-weight:600;" title="Gutschein {{ booking.voucher_code }}: −{{ euro(booking.voucher_cents) }}">🎟 {{ booking.voucher_code }}</span>
+          {% endif %}
+        </td>
         <td><span class="pill {{ booking.status }}">{{ status_labels[booking.status] }}</span></td>
         <td>
           <a class="btn ghost" style="padding:4px 8px; font-size:12px;" href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}">Öffnen</a>

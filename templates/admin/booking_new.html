@@ -19,12 +19,22 @@
     <label>Anreise<input type="date" name="start" required></label>
     <label>Abreise<input type="date" name="end" required></label>
   </div>
-  <label>Versandart
-    <select name="delivery_type" id="manual-delivery-type">
-      <option value="delivery">🚚 Lieferung an Wunschort (Kundenadresse)</option>
-      <option value="pickup">🏪 Kostenlose Selbstabholung (14929 Treuenbrietzen)</option>
-    </select>
-  </label>
+  <div class="pair">
+    <label>Versandart
+      <select name="delivery_type" id="manual-delivery-type">
+        <option value="delivery">🚚 Lieferung an Wunschort (Kundenadresse)</option>
+        <option value="pickup">🏪 Kostenlose Selbstabholung (14929 Treuenbrietzen)</option>
+      </select>
+    </label>
+    <label id="manual-zone-wrap">Lieferzone (manuell / überschreiben)
+      <select name="zone_id" id="manual-zone-id">
+        <option value="">Automatisch (nach Adresse / Entfernung)</option>
+        {% for z in zones %}
+        <option value="{{ z.id }}">{{ z.badge }} · {{ z.name }} ({{ euro(z.price_cents) }})</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
   <div class="stack-label" id="manual-map-wrap">Lieferort / Abholstation
     <div id="manual-map" class="pin-map"></div>
     <input type="hidden" name="lat" id="manual-lat">
@@ -54,13 +64,27 @@
     <label>E-Mail<input name="email" type="email" required></label>
     <label>Telefon<input name="phone" required></label>
   </div>
+  <div class="pair">
+    <label>Lieferfenster
+      <select name="arrival_window" id="manual-arrival-window">
+        <option value="">Bitte wählen / Flexibel</option>
+        <option value="vormittag">☀️ Vormittag (ca. 8:00 – 12:00 Uhr)</option>
+        <option value="nachmittag">🌤 Nachmittag (ca. 12:00 – 17:00 Uhr)</option>
+        <option value="flexibel">⏰ Flexibel (nach Absprache)</option>
+      </select>
+    </label>
+    <label>Gutscheincode (optional)
+      <input name="voucher_code" id="manual-voucher-code" placeholder="z.B. SAUNA50" maxlength="40" style="text-transform:uppercase;">
+    </label>
+  </div>
   <label>Anmerkung<textarea name="notes" rows="3"></textarea></label>
   <div class="pair">
     <label>Zahlung
-      <select name="payment_method">
-        <option value="invoice">Rechnung</option>
-        <option value="card">Kreditkarte</option>
-        <option value="paypal">PayPal</option>
+      <select name="payment_method" id="manual-payment-method">
+        <option value="cash" selected>💵 Barzahlung bei Übergabe</option>
+        <option value="card">💳 Kreditkarte</option>
+        <option value="paypal">🅿️ PayPal</option>
+        <option value="invoice">📄 Rechnung</option>
       </select>
     </label>
     <label>Status
@@ -71,7 +95,7 @@
       </select>
     </label>
   </div>
-  <div class="pair">
+  <div class="pair" id="manual-card-fields" style="display:none;">
     <label>Karte, letzte 4<input name="card_last4" maxlength="4"></label>
     <label>Marke<input name="card_brand" placeholder="Visa"></label>
     <label>Ablauf MM/JJ<input name="card_exp" placeholder="12/28"></label>
@@ -100,25 +124,50 @@
         address: data.get("address"),
         lat: data.get("lat"),
         lng: data.get("lng"),
+        zone_id: data.get("zone_id") || "",
+        voucher_code: (data.get("voucher_code") || "").trim(),
         extras
       })
     });
     const json = await res.json();
-    preview.textContent = json.ok ? (json.range_label + " · " + (json.zone ? json.zone.badge + " · " : "") + (json.gross || "Lieferung fehlt")) : json.error;
+    let previewText = "";
+    if (json.ok) {
+      previewText = json.range_label + " · " + (json.zone ? json.zone.badge + " · " : "") + (json.gross || "Lieferung fehlt");
+      if (json.voucher) {
+        previewText += " (inkl. Gutschein: " + json.voucher + ")";
+      }
+    } else {
+      previewText = json.error;
+    }
+    preview.textContent = previewText;
   }
   form.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(refresh, 300); });
+  form.addEventListener("change", () => { clearTimeout(timer); timer = setTimeout(refresh, 100); });
+
+  const payMethodSelect = document.getElementById("manual-payment-method");
+  const cardFields = document.getElementById("manual-card-fields");
+  if (payMethodSelect && cardFields) {
+    payMethodSelect.addEventListener("change", () => {
+      cardFields.style.display = payMethodSelect.value === "card" ? "grid" : "none";
+    });
+  }
 
   const delTypeSelect = document.getElementById("manual-delivery-type");
+  const zoneWrap = document.getElementById("manual-zone-wrap");
+  const zoneSelect = document.getElementById("manual-zone-id");
   if (delTypeSelect) {
     delTypeSelect.addEventListener("change", () => {
       if (delTypeSelect.value === "pickup") {
         document.getElementById("manual-address").value = "Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)";
         document.getElementById("manual-lat").value = "52.0911";
         document.getElementById("manual-lng").value = "12.8711";
+        if (zoneWrap) zoneWrap.style.display = "none";
+        if (zoneSelect) zoneSelect.value = "";
       } else {
         document.getElementById("manual-address").value = "";
         document.getElementById("manual-lat").value = "";
         document.getElementById("manual-lng").value = "";
+        if (zoneWrap) zoneWrap.style.display = "";
       }
       refresh();
     });

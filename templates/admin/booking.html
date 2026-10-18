@@ -49,22 +49,40 @@
         <tr><td>Gesamt</td><td><strong>{{ euro(booking.gross_cents) }}</strong></td></tr>
       </tbody>
     </table>
-    <p>Zahlung: {{ booking.payment_method }} · {{ booking.payment_status }}
+    <p>
+      <strong>Zahlungsart:</strong>
+      {% if booking.payment_method == 'cash' %}💵 Barzahlung bei Übergabe
+      {% elif booking.payment_method == 'card' %}💳 Kreditkarte
+      {% elif booking.payment_method == 'paypal' %}🅿️ PayPal
+      {% else %}📄 {{ payment_labels.get(booking.payment_method, booking.payment_method) }}{% endif %}
+      ·
+      {% if booking.payment_status == 'paid' %}
+      <span class="pill" style="background:#10b981; color:#fff; font-size:11px; padding:2px 8px;">Bezahlt</span>
+      {% elif booking.payment_status == 'simulated' %}
+      <span class="pill" style="background:#6366f1; color:#fff; font-size:11px; padding:2px 8px;">Vorgemerkt</span>
+      {% else %}
+      <span class="pill" style="background:#f59e0b; color:#000; font-size:11px; padding:2px 8px; font-weight:700;">Offen (Unbezahlt)</span>
+      {% endif %}
       {% if booking.card_last4 %} · {{ booking.card_brand }} ···· {{ booking.card_last4 }} {{ booking.card_exp }}{% endif %}
     </p>
-    {% if booking.arrival_window %}<p>Lieferfenster: {{ booking.arrival_window }}</p>{% endif %}
+    {% if booking.arrival_window %}
+    <p><strong>Lieferfenster:</strong> {{ window_labels.get(booking.arrival_window, booking.arrival_window) }}</p>
+    {% endif %}
+    {% if booking.voucher_code %}
+    <p><span class="pill" style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); font-weight:600;">🎟 Gutschein: {{ booking.voucher_code }} (−{{ euro(booking.voucher_cents) }})</span></p>
+    {% endif %}
     {% if booking.company %}<p>Firma: {{ booking.company }}{% if booking.company_vat %} · {{ booking.company_vat }}{% endif %}</p>{% endif %}
     {% if booking.access_ok %}<p>Zugang, Stellfläche und Übergabe wurden bestätigt.</p>{% endif %}
-    <p><a href="{{ url_for('admin.booking_pdf', booking_id=booking.id) }}">PDF</a></p>
+    <p><a href="{{ url_for('admin.booking_pdf', booking_id=booking.id) }}">PDF Beleg herunterladen</a></p>
     {% if settings.stripe_secret_set %}
     <p class="fine">Stripe ist eingerichtet. Kartendaten liegen nicht in dieser Anwendung.</p>
     {% else %}
-    <p class="fine">Demo: es wird kein Geld abgebucht. Preise bleiben so, wie sie bei der Buchung galten.</p>
+    <p class="fine">Barzahlung erfolgt direkt bei Übergabe an der Kundenadresse oder Abholstation.</p>
     {% endif %}
     {% if booking.payment_status != 'paid' %}
     <form method="post" action="{{ url_for('admin.booking_paid', booking_id=booking.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn" type="submit">Zahlung erhalten</button>
+      <button class="btn" type="submit">Zahlung erhalten (als bezahlt markieren)</button>
     </form>
     {% endif %}
     {% if booking.notes %}<p>Anmerkung: {{ booking.notes }}</p>{% endif %}
@@ -92,9 +110,51 @@
       <label>Lieferadresse / Abholort
         <input name="address" id="delivery-addr-input" value="{{ booking.address }}">
       </label>
+      <div class="pair">
+        <label>Lieferzone
+          <select name="zone_id" id="admin-zone-select" onchange="const opt = this.options[this.selectedIndex]; if(opt && opt.dataset.price !== undefined && opt.dataset.price !== '') document.getElementById('admin-delivery-price').value = opt.dataset.price;">
+            <option value="">Zone beibehalten ({{ booking.zone_name }})</option>
+            {% for z in zones %}
+            <option value="{{ z.id }}" data-price="{{ (z.price_cents / 100)|round(2) }}" {% if booking.zone_name == z.name %}selected{% endif %}>{{ z.badge }} · {{ z.name }} ({{ euro(z.price_cents) }})</option>
+            {% endfor %}
+            <option value="custom" data-price="">✏️ Individuelle Pauschale / Freie Eingabe</option>
+          </select>
+        </label>
+        <label>Lieferkosten (€)
+          <input name="delivery_price" id="admin-delivery-price" type="text" value="{{ (booking.delivery_cents / 100)|round(2) }}" placeholder="0.00">
+        </label>
+      </div>
+      <label>Lieferfenster
+        <select name="arrival_window">
+          <option value="" {% if not booking.arrival_window %}selected{% endif %}>Standard / Nicht angegeben</option>
+          <option value="vormittag" {% if booking.arrival_window == 'vormittag' %}selected{% endif %}>☀️ Vormittag (ca. 8:00 – 12:00 Uhr)</option>
+          <option value="nachmittag" {% if booking.arrival_window == 'nachmittag' %}selected{% endif %}>🌤 Nachmittag (ca. 12:00 – 17:00 Uhr)</option>
+          <option value="flexibel" {% if booking.arrival_window == 'flexibel' %}selected{% endif %}>⏰ Flexibel (nach Absprache)</option>
+        </select>
+      </label>
       <input type="hidden" name="lat" value="{{ booking.lat if booking.lat is not none else '' }}">
       <input type="hidden" name="lng" value="{{ booking.lng if booking.lng is not none else '' }}">
-      <button class="btn" type="submit">Versandart speichern</button>
+      <button class="btn" type="submit">Versandart, Zone &amp; Lieferfenster speichern</button>
+    </form>
+    <h2>Zahlungsdaten</h2>
+    <form method="post" action="{{ url_for('admin.booking_payment', booking_id=booking.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Zahlungsart
+        <select name="payment_method">
+          <option value="cash" {% if booking.payment_method == 'cash' %}selected{% endif %}>💵 Barzahlung bei Übergabe</option>
+          <option value="card" {% if booking.payment_method == 'card' %}selected{% endif %}>💳 Kreditkarte</option>
+          <option value="paypal" {% if booking.payment_method == 'paypal' %}selected{% endif %}>🅿️ PayPal</option>
+          <option value="invoice" {% if booking.payment_method == 'invoice' %}selected{% endif %}>📄 Rechnung</option>
+        </select>
+      </label>
+      <label>Zahlungsstatus
+        <select name="payment_status">
+          <option value="unpaid" {% if booking.payment_status == 'unpaid' %}selected{% endif %}>Offen (Unbezahlt)</option>
+          <option value="paid" {% if booking.payment_status == 'paid' %}selected{% endif %}>Bezahlt</option>
+          <option value="simulated" {% if booking.payment_status == 'simulated' %}selected{% endif %}>Vorgemerkt / Bestätigt</option>
+        </select>
+      </label>
+      <button class="btn" type="submit">Zahlung aktualisieren</button>
     </form>
     <h2>Kontakt</h2>
     <form method="post" action="{{ url_for('admin.booking_contact', booking_id=booking.id) }}">

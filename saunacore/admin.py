@@ -340,9 +340,9 @@ def bookings():
         sql += " AND delivery_type = ?"
         params.append(delivery_type)
     if query:
-        sql += " AND (number LIKE ? OR email LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR city LIKE ? OR address LIKE ?)"
+        sql += " AND (number LIKE ? OR email LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR city LIKE ? OR address LIKE ? OR voucher_code LIKE ? OR payment_method LIKE ?)"
         like = f"%{query}%"
-        params.extend([like, like, like, like, like, like])
+        params.extend([like, like, like, like, like, like, like, like])
     try:
         page = max(1, int(request.args.get("page", 1)))
     except ValueError:
@@ -458,6 +458,7 @@ def booking_new():
             "address": request.form.get("address", ""),
             "lat": request.form.get("lat", ""),
             "lng": request.form.get("lng", ""),
+            "zone_id": request.form.get("zone_id") or "",
             "extras": _selected_extras(request.form),
             "first_name": request.form.get("first_name", ""),
             "last_name": request.form.get("last_name", ""),
@@ -465,6 +466,8 @@ def booking_new():
             "phone": request.form.get("phone", ""),
             "notes": request.form.get("notes", ""),
             "payment_method": request.form.get("payment_method"),
+            "arrival_window": (request.form.get("arrival_window") or "").strip().lower(),
+            "voucher_code": (request.form.get("voucher_code") or "").strip().upper(),
             "card_last4": request.form.get("card_last4", ""),
             "card_brand": request.form.get("card_brand", ""),
             "card_exp": request.form.get("card_exp", ""),
@@ -481,7 +484,8 @@ def booking_new():
         else:
             flash(f"Buchung {booking['number']} angelegt.")
             return redirect(url_for("admin.booking_detail", booking_id=booking["id"]))
-    return render_template("admin/booking_new.html", models=models, extras=extras, title="Neue Buchung")
+    zones = db.execute("SELECT * FROM zones WHERE active = 1 ORDER BY sort_order, id").fetchall()
+    return render_template("admin/booking_new.html", models=models, extras=extras, zones=zones, title="Neue Buchung")
 
 
 @bp.get("/buchungen/<int:booking_id>")
@@ -494,10 +498,12 @@ def booking_detail(booking_id):
         "SELECT * FROM booking_events WHERE booking_id = ? ORDER BY id DESC",
         (booking_id,),
     ).fetchall()
+    zones = db.execute("SELECT * FROM zones WHERE active = 1 ORDER BY sort_order, id").fetchall()
     return render_template(
         "admin/booking.html",
         booking=booking,
         extras=json.loads(booking["extras_json"]),
+        zones=zones,
         events=events,
         range_label=service.format_range(date.fromisoformat(booking["start_date"]), date.fromisoformat(booking["end_date"])),
         title=booking["number"],
@@ -534,6 +540,7 @@ def booking_delivery(booking_id):
     address = request.form.get("address", "").strip()
     lat = request.form.get("lat")
     lng = request.form.get("lng")
+    arrival_window = (request.form.get("arrival_window") or "").strip().lower()
     if delivery_type == "pickup":
         if not address:
             address = "Tiefenbrunnen 1, 14929 Treuenbrietzen (Selbstabholung)"
@@ -545,17 +552,87 @@ def booking_delivery(booking_id):
             lng_val = float(lng) if lng else None
         except ValueError:
             lat_val, lng_val = None, None
+
+    booking = db.execute("SELECT * FROM bookings WHERE id = ?", (booking_id,)).fetchone()
+    new_delivery_cents = booking["delivery_cents"]
+    new_zone_name = booking["zone_name"]
+    zone_id = request.form.get("zone_id", "").strip()
+    custom_price = request.form.get("delivery_price", "").strip()
+    z = None
+    if zone_id == "custom":
+        new_zone_name = "Individuelle Lieferpauschale"
+        if custom_price:
+            try:
+                new_delivery_cents = service.parse_money(custom_price)
+            except ValueError:
+                pass
+    elif zone_id:
+        z = db.execute("SELECT * FROM zones WHERE id = ?", (zone_id,)).fetchone()
+        if z:
+            new_zone_name = z["name"]
+            new_delivery_cents = int(z["price_cents"])
+            if custom_price:
+                try:
+                    parsed_custom = service.parse_money(custom_price)
+                    if parsed_custom != int(z["price_cents"]):
+                        new_delivery_cents = parsed_custom
+                except ValueError:
+                    pass
+    elif custom_price:
+        try:
+            new_delivery_cents = service.parse_money(custom_price)
+        except ValueError:
+            pass
+    if delivery_type == "pickup":
+        new_delivery_cents = 0
+        new_zone_name = "Selbstabholung"
+
+    base = booking["rent_cents"] + booking["extras_cents"] + new_delivery_cents - booking["voucher_cents"]
+    new_gross = max(0, base) + booking["deposit_cents"]
+    settings = service.load_settings(db)
+    percent = service.int_setting(settings, "vat_percent", 19)
+    new_vat = service.included_vat(new_gross, percent)
+
     db.execute(
-        "UPDATE bookings SET delivery_type = ?, address = ?, lat = ?, lng = ? WHERE id = ?",
-        (delivery_type, address, lat_val, lng_val, booking_id),
+        """
+        UPDATE bookings SET delivery_type = ?, address = ?, lat = ?, lng = ?, arrival_window = ?,
+               zone_name = ?, delivery_cents = ?, gross_cents = ?, vat_cents = ?
+        WHERE id = ?
+        """,
+        (delivery_type, address, lat_val, lng_val, arrival_window, new_zone_name, new_delivery_cents, new_gross, new_vat, booking_id),
     )
     type_label = "Selbstabholung (Treuenbrietzen)" if delivery_type == "pickup" else "Lieferung an Wunschort"
-    service.add_booking_event(
-        db,
-        booking_id,
-        f"Versandart geändert: {type_label} — {address}",
+    win_label = service.WINDOW_LABELS.get(arrival_window, arrival_window) if arrival_window else ""
+    win_info = f" · Fenster: {win_label}" if win_label else ""
+    db.execute(
+        "INSERT INTO booking_events (booking_id, message, created_at) VALUES (?, ?, ?)",
+        (
+            booking_id,
+            f"Versandart & Zone geändert: {type_label} · Zone: {new_zone_name} ({service.format_euro(new_delivery_cents)}) — {address}{win_info}",
+            service.now(),
+        ),
     )
-    flash(f"Versandart auf „{type_label}“ geändert.")
+    flash(f"Versandart, Zone ({new_zone_name}) & Lieferfenster gespeichert.")
+    return redirect(url_for("admin.booking_detail", booking_id=booking_id))
+
+
+@bp.post("/buchungen/<int:booking_id>/zahlung")
+def booking_payment(booking_id):
+    db = get_db()
+    method = (request.form.get("payment_method") or "").strip()
+    pay_status = (request.form.get("payment_status") or "").strip()
+    if method not in service.PAYMENTS or pay_status not in {"unpaid", "paid", "simulated"}:
+        flash("Ungültige Angaben zur Zahlung.", "error")
+    else:
+        db.execute(
+            "UPDATE bookings SET payment_method = ?, payment_status = ? WHERE id = ?",
+            (method, pay_status, booking_id),
+        )
+        db.execute(
+            "INSERT INTO booking_events (booking_id, message, created_at) VALUES (?, ?, ?)",
+            (booking_id, f"Zahlung aktualisiert: {service.PAYMENTS[method]} · {pay_status}", service.now()),
+        )
+        flash("Zahlung aktualisiert.")
     return redirect(url_for("admin.booking_detail", booking_id=booking_id))
 
 
@@ -1309,7 +1386,7 @@ def settings():
         _save_setting(db, "stripe_publishable", publishable)
         _save_setting(db, "stripe_secret", secret.strip()[:200])
         _save_setting(db, "stripe_webhook", webhook.strip()[:200])
-        flash("Zahlungsdienstleister gespeichert. Ohne Geheimschlüssel bleibt die Demo-Zahlung aktiv.")
+        flash("Zahlungsdienstleister gespeichert.")
         return redirect(url_for("admin.settings"))
     if request.method == "POST":
         updates = {}

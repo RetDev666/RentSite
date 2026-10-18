@@ -61,7 +61,7 @@ def booking_body(booking, settings: dict) -> str:
     if window:
         lines.append(f"Lieferfenster: {window}")
     if booking["payment_status"] == "simulated":
-        lines.append("Zahlungsstatus: Demo, keine Abbuchung.")
+        lines.append("Zahlungsstatus: vorgemerkt.")
     elif booking["payment_status"] == "unpaid":
         lines.append("Zahlungsstatus: offen.")
     else:

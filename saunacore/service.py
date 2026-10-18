@@ -28,7 +28,17 @@ STATUS_LABELS = {
     "completed": "Abgeschlossen",
     "cancelled": "Storniert",
 }
-PAYMENTS = {"card": "Kreditkarte", "paypal": "PayPal", "invoice": "Rechnung"}
+PAYMENTS = {
+    "cash": "Barzahlung bei Übergabe",
+    "card": "Kreditkarte",
+    "paypal": "PayPal",
+    "invoice": "Rechnung",
+}
+WINDOW_LABELS = {
+    "vormittag": "Vormittag (ca. 8–12 Uhr)",
+    "nachmittag": "Nachmittag (ca. 12–17 Uhr)",
+    "flexibel": "Flexibel",
+}
 KIND_LABELS = {"miete": "Miete", "kauf": "Kauf", "service": "Service"}
 MONTHS = [
     "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -700,7 +710,7 @@ def _resolve_extras(db, raw) -> list[dict]:
     return resolved
 
 
-def build_quote(db, *, model_id: int, start: date, end: date, address: str, extras, check_availability=True, exclude_booking_id=None, allow_past=False) -> dict:
+def build_quote(db, *, model_id: int, start: date, end: date, address: str, extras, check_availability=True, exclude_booking_id=None, allow_past=False, zone_id=None) -> dict:
     try:
         model_id = int(model_id)
     except (TypeError, ValueError) as exc:
@@ -726,12 +736,23 @@ def build_quote(db, *, model_id: int, start: date, end: date, address: str, extr
     delivery = None
     plz = ""
     city = ""
+    if zone_id:
+        try:
+            zone = db.execute("SELECT * FROM zones WHERE id = ?", (int(zone_id),)).fetchone()
+            if zone:
+                delivery = int(zone["price_cents"])
+        except (ValueError, TypeError):
+            zone = None
     if (address or "").strip():
-        zone, plz = lookup_zone(db, address)
         parsed_plz, city, _country = parse_address(address)
-        plz = plz or parsed_plz
+        plz = parsed_plz
         if zone is None:
-            raise QuoteError("Diese Adresse liegt außerhalb unseres Liefergebiets.")
+            zone, plz_found = lookup_zone(db, address)
+            plz = plz or plz_found
+            if zone is None:
+                raise QuoteError("Diese Adresse liegt außerhalb unseres Liefergebiets.")
+            delivery = int(zone["price_cents"])
+    elif zone is not None:
         delivery = int(zone["price_cents"])
     chosen = _resolve_extras(db, extras)
     rent = int(model["price_cents"]) * nights
@@ -946,6 +967,7 @@ def quote_from_payload(db, data: dict, allow_past=False) -> dict:
         lng = 12.8711
     else:
         address, lat, lng = resolve_location(data)
+    zone_id = data.get("zone_id")
     result = build_quote(
         db,
         model_id=data.get("model_id"),
@@ -954,6 +976,7 @@ def quote_from_payload(db, data: dict, allow_past=False) -> dict:
         address=address,
         extras=data.get("extras") or [],
         allow_past=allow_past,
+        zone_id=zone_id,
     )
     if delivery_type == "pickup":
         result["delivery_cents"] = 0
@@ -1064,6 +1087,9 @@ def create_booking(db, data: dict, *, allow_past=False, status: str | None = Non
         elif method == "invoice":
             pay_state = payment_status or "unpaid"
             book_status = status or "new"
+        elif method == "cash":
+            pay_state = payment_status or "unpaid"
+            book_status = status or "confirmed"
         else:
             pay_state = payment_status or "simulated"
             book_status = status or "confirmed"

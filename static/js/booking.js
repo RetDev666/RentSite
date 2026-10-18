@@ -259,9 +259,17 @@
   const pickupInfoBox = byId("pickup-info-box");
   const deliveryFine = byId("delivery-fine");
   const windowPickWrap = byId("window-pick-wrap");
+  const zonePickerWrap = byId("zone-picker-wrap");
+  const zoneSelect = byId("manual-zone-select");
   const searchInput = byId("map-address-search");
   const searchBtn = byId("btn-search-address");
   const searchWrap = byId("map-search-wrap");
+
+  if (zoneSelect) {
+    zoneSelect.addEventListener("change", () => {
+      scheduleQuote();
+    });
+  }
 
   async function searchAddress() {
     if (!searchInput) return;
@@ -317,6 +325,7 @@
       if (pickupInfoBox) pickupInfoBox.style.display = "block";
       if (deliveryFine) deliveryFine.style.display = "none";
       if (windowPickWrap) windowPickWrap.style.display = "none";
+      if (zonePickerWrap) zonePickerWrap.style.display = "none";
       if (searchWrap) searchWrap.style.display = "none";
 
       state.lat = 52.0911;
@@ -335,6 +344,7 @@
       if (pickupInfoBox) pickupInfoBox.style.display = "none";
       if (deliveryFine) deliveryFine.style.display = "block";
       if (windowPickWrap) windowPickWrap.style.display = "block";
+      if (zonePickerWrap) zonePickerWrap.style.display = "block";
       if (searchWrap) searchWrap.style.display = "flex";
 
       if (state.address && state.address.includes("Treuenbrietzen")) {
@@ -436,6 +446,7 @@
           address: state.address.trim(),
           lat: state.lat,
           lng: state.lng,
+          zone_id: (byId("manual-zone-select") && byId("manual-zone-select").value) || "",
           extras: chosenExtras(),
           voucher_code: (byId("voucher") && byId("voucher").value.trim()) || "",
         }),
@@ -446,6 +457,9 @@
         showError(data.error);
         renderSummary();
         return null;
+      }
+      if (data.zone && byId("zone-badge")) {
+        byId("zone-badge").textContent = data.zone.badge;
       }
 
       // Defensive fallbacks for formatted labels and prices
@@ -544,13 +558,21 @@
     return "";
   }
 
+  const windowNames = {
+    vormittag: "Vormittag (ca. 8–12 Uhr)",
+    nachmittag: "Nachmittag (ca. 12–17 Uhr)",
+    flexibel: "Flexibel",
+  };
+
   function renderWho() {
+    const win = windowValue();
+    const winLabel = windowNames[win] || win;
     byId("who").innerHTML = [
       "<p><strong>" + escapeHtml(byId("first-name").value.trim()) + " " + escapeHtml(byId("last-name").value.trim()) + "</strong></p>",
       "<p>" + escapeHtml(byId("email").value.trim()) + "</p>",
       "<p>" + escapeHtml(byId("phone").value.trim()) + "</p>",
       "<p>" + escapeHtml(state.address.trim()) + "</p>",
-      windowValue() ? "<p>Lieferfenster: " + escapeHtml(windowValue()) + "</p>" : "",
+      win ? "<p>Lieferfenster: " + escapeHtml(winLabel) + "</p>" : "",
     ].join("");
   }
 
@@ -576,15 +598,20 @@
     goStep(4);
   });
 
-  document.querySelectorAll('input[name="pay"]').forEach((radio) => {
-    radio.addEventListener("change", () => {
-      document.querySelectorAll(".pay-option").forEach((option) => {
-        option.classList.toggle("is-selected", option.querySelector("input").checked);
-      });
-      byId("card-fields").hidden = boot.stripe || document.querySelector('input[name="pay"]:checked').value !== "card";
+  function syncPayOption() {
+    const checked = document.querySelector('input[name="pay"]:checked');
+    document.querySelectorAll(".pay-option").forEach((option) => {
+      option.classList.toggle("is-selected", option.querySelector("input").checked);
     });
+    if (byId("card-fields")) {
+      byId("card-fields").hidden = boot.stripe || !checked || checked.value !== "card";
+    }
+  }
+
+  document.querySelectorAll('input[name="pay"]').forEach((radio) => {
+    radio.addEventListener("change", syncPayOption);
   });
-  if (boot.stripe) byId("card-fields").hidden = true;
+  syncPayOption();
 
   byId("card-number").addEventListener("input", (event) => {
     const digits = event.target.value.replace(/\D/g, "").slice(0, 19);
@@ -633,6 +660,7 @@
       address: state.address.trim(),
       lat: state.lat,
       lng: state.lng,
+      zone_id: (byId("manual-zone-select") && byId("manual-zone-select").value) || "",
       extras: chosenExtras(),
       first_name: byId("first-name").value.trim(),
       last_name: byId("last-name").value.trim(),

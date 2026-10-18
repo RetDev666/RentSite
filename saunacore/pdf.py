@@ -109,7 +109,7 @@ def invoice_pdf(booking, settings: dict, extras: list) -> bytes:
     lines.append(f"Gesamt {service.format_euro(booking['gross_cents'])}")
     lines.append(f"darin MwSt. {service.format_euro(booking['vat_cents'])}")
     if booking["payment_status"] == "simulated":
-        lines.append("Demo: es wurde kein Geld abgebucht.")
+        lines.append("Zahlung bei Übergabe oder per Überweisung.")
     elif booking["payment_status"] == "unpaid":
         lines.append("Offen, bis die Zahlung erfasst ist.")
     return _pdf([line for line in lines if line is not None])

@@ -67,9 +67,9 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="action" value="stripe">
   <h2>Stripe</h2>
-  <p class="fine">Ohne Geheimschlüssel bleibt Karte und PayPal eine Demo. Die Kartennummer wird weiterhin nicht gespeichert. Webhook: {{ request.url_root }}api/stripe/webhook</p>
+  <p class="fine">Kreditkartenzahlung und PayPal über Stripe abwickeln. Webhook: {{ request.url_root }}api/stripe/webhook</p>
   <label>Publishable Key<input name="stripe_publishable" value="{{ settings.stripe_publishable }}" autocomplete="off"></label>
-  <label>Geheimschlüssel<input type="password" name="stripe_secret" value="" autocomplete="new-password" placeholder="{% if settings.stripe_secret_set %}gespeichert, leer lassen{% else %}leer = Demo{% endif %}"></label>
+  <label>Geheimschlüssel<input type="password" name="stripe_secret" value="" autocomplete="new-password" placeholder="{% if settings.stripe_secret_set %}gespeichert, leer lassen{% else %}sk_live_... oder sk_test_...{% endif %}"></label>
   <label>Webhook-Geheimnis<input type="password" name="stripe_webhook" value="" autocomplete="new-password" placeholder="{% if settings.stripe_webhook_set %}gespeichert, leer lassen{% endif %}"></label>
   <button class="btn" type="submit">Stripe speichern</button>
 </form>

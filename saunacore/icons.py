@@ -43,6 +43,18 @@ ICONS = {
     ),
     "check": _svg('<path d="M20 6 9 17l-5-5"/>'),
     "card": _svg('<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19"/>'),
+    "cash": _svg(
+        '<rect x="2" y="6" width="20" height="12" rx="2"/>'
+        '<circle cx="12" cy="12" r="2.5"/>'
+        '<path d="M6 12h.01M18 12h.01"/>'
+    ),
+    "paypal": _svg(
+        '<path d="M7 20l2.5-13h5.5a3.5 3.5 0 0 1 0 7h-4.2l-1.3 6H7z"/>'
+    ),
+    "clock": _svg(
+        '<circle cx="12" cy="12" r="9"/>'
+        '<polyline points="12 7 12 12 15 14"/>'
+    ),
     "lock": _svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
     "calendar": _svg('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
     "mail": _svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>'),

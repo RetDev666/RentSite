@@ -401,7 +401,7 @@ class SaunacoreTests(unittest.TestCase):
         detail = self.db.execute("SELECT id FROM bookings WHERE client_token = 'seed-anna'").fetchone()["id"]
         opened = self.client.get(f"/admin/buchungen/{detail}")
         self.assertEqual(opened.status_code, 200)
-        self.assertIn("Demo", opened.get_data(as_text=True))
+        self.assertIn("Zahlungsart", opened.get_data(as_text=True))
         token = self.admin_token()
         paid = self.client.post(f"/admin/buchungen/{detail}/bezahlt", data={"csrf_token": token})
         self.assertEqual(paid.status_code, 302)
@@ -514,6 +514,189 @@ class SaunacoreTests(unittest.TestCase):
         busy = self.client.get(f"/api/busy?model_id={row['id']}&start={start}&end={end}")
         self.assertIn(start, busy.get_json()["busy"])
         self.assertNotIn(end, busy.get_json()["busy"])
+
+    def test_cash_payment_and_arrival_window_and_admin_vouchers(self):
+        # 1. Test public booking with cash payment and arrival window
+        start, end = self.span(90, 2)
+        cash_res = self.book(**self.guest(
+            start=start,
+            end=end,
+            payment_method="cash",
+            arrival_window="vormittag",
+            client_token="cash-test-1",
+            email="cash@example.com",
+        ))
+        self.assertEqual(cash_res.status_code, 200, cash_res.get_json())
+        b_cash = self.db.execute("SELECT * FROM bookings WHERE client_token = 'cash-test-1'").fetchone()
+        self.assertIsNotNone(b_cash)
+        self.assertEqual(b_cash["payment_method"], "cash")
+        self.assertEqual(b_cash["payment_status"], "unpaid")
+        self.assertEqual(b_cash["arrival_window"], "vormittag")
+        self.assertEqual(b_cash["status"], "confirmed")
+
+        # 2. Test admin vouchers management
+        self.login()
+        token = self.admin_token()
+        v_created = self.client.post(
+            "/admin/gutscheine",
+            data={
+                "csrf_token": token,
+                "code": "RABATT30",
+                "amount": "30",
+                "max_uses": "5",
+                "note": "Testgutschein",
+                "active": "1",
+            },
+        )
+        self.assertEqual(v_created.status_code, 302)
+        v_row = self.db.execute("SELECT * FROM vouchers WHERE code = 'RABATT30'").fetchone()
+        self.assertIsNotNone(v_row)
+        self.assertEqual(v_row["cents"], 3000)
+
+        # 3. Test admin manual booking creation with cash, arrival window, and voucher
+        start2, end2 = self.span(95, 2)
+        admin_book = self.client.post(
+            "/admin/buchungen/neu",
+            data={
+                "csrf_token": token,
+                "model_id": str(self.model_id("fasssauna-panorama")),
+                "delivery_type": "delivery",
+                "start": start2,
+                "end": end2,
+                "address": "Unter den Linden 1, 10115 Berlin",
+                "lat": "52.52",
+                "lng": "13.40",
+                "arrival_window": "nachmittag",
+                "voucher_code": "RABATT30",
+                "first_name": "Otto",
+                "last_name": "Admin",
+                "email": "otto@example.com",
+                "phone": "+49 170 998877",
+                "payment_method": "cash",
+                "status": "confirmed",
+            },
+        )
+        self.assertEqual(admin_book.status_code, 302)
+        b_otto = self.db.execute("SELECT * FROM bookings WHERE email = 'otto@example.com'").fetchone()
+        self.assertIsNotNone(b_otto)
+        self.assertEqual(b_otto["payment_method"], "cash")
+        self.assertEqual(b_otto["arrival_window"], "nachmittag")
+        self.assertEqual(b_otto["voucher_code"], "RABATT30")
+        self.assertEqual(b_otto["voucher_cents"], 3000)
+
+        # 4. Test admin updating payment and arrival window on existing booking
+        upd_pay = self.client.post(
+            f"/admin/buchungen/{b_otto['id']}/zahlung",
+            data={
+                "csrf_token": token,
+                "payment_method": "paypal",
+                "payment_status": "paid",
+            },
+        )
+        self.assertEqual(upd_pay.status_code, 302)
+        b_otto_upd = self.db.execute("SELECT * FROM bookings WHERE id = ?", (b_otto["id"],)).fetchone()
+        self.assertEqual(b_otto_upd["payment_method"], "paypal")
+        self.assertEqual(b_otto_upd["payment_status"], "paid")
+
+        upd_del = self.client.post(
+            f"/admin/buchungen/{b_otto['id']}/delivery",
+            data={
+                "csrf_token": token,
+                "delivery_type": "delivery",
+                "address": "Unter den Linden 1, 10115 Berlin",
+                "arrival_window": "flexibel",
+            },
+        )
+        self.assertEqual(upd_del.status_code, 302)
+        b_otto_win = self.db.execute("SELECT arrival_window FROM bookings WHERE id = ?", (b_otto["id"],)).fetchone()
+        self.assertEqual(b_otto_win["arrival_window"], "flexibel")
+
+    def test_manual_zone_selection_and_admin_delivery_override(self):
+        zone_b = self.db.execute("SELECT * FROM zones WHERE name = 'Zone B'").fetchone()
+        self.assertIsNotNone(zone_b)
+        zone_b_id = zone_b["id"]
+
+        start, end = self.span(100, 2)
+        # 1. Quote with Berlin address but explicit Zone B override
+        res = self.quote(
+            model_id=self.model_id("fasssauna-panorama"),
+            start=start,
+            end=end,
+            address="Unter den Linden 1, 10115 Berlin",
+            zone_id=zone_b_id,
+            extras=[],
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.get_json()
+        self.assertEqual(body["delivery_cents"], 5000)
+        self.assertEqual(body["zone"]["id"], zone_b_id)
+
+        # 2. Public booking with cash and manual zone override
+        book_res = self.book(
+            **self.guest(
+                start=start,
+                end=end,
+                payment_method="cash",
+                zone_id=zone_b_id,
+                arrival_window="vormittag",
+                client_token="guest-cash-manual-zone",
+            )
+        )
+        self.assertEqual(book_res.status_code, 200, book_res.get_json())
+        b_row = self.db.execute("SELECT * FROM bookings WHERE client_token = 'guest-cash-manual-zone'").fetchone()
+        self.assertIsNotNone(b_row)
+        self.assertEqual(b_row["payment_method"], "cash")
+        self.assertEqual(b_row["payment_status"], "unpaid")
+        self.assertEqual(b_row["delivery_cents"], 5000)
+        self.assertEqual(b_row["zone_name"], "Zone B")
+        self.assertEqual(b_row["arrival_window"], "vormittag")
+
+        # 3. Admin manually creating booking with zone_id
+        self.login()
+        token = self.admin_token()
+        start_adm, end_adm = self.span(105, 2)
+        adm_res = self.client.post(
+            "/admin/buchungen/neu",
+            data={
+                "csrf_token": token,
+                "model_id": str(self.model_id("fasssauna-panorama")),
+                "delivery_type": "delivery",
+                "start": start_adm,
+                "end": end_adm,
+                "address": "Musterstr. 1, 10115 Berlin",
+                "zone_id": str(zone_b_id),
+                "arrival_window": "nachmittag",
+                "first_name": "Klaus",
+                "last_name": "Zone",
+                "email": "klaus@example.com",
+                "phone": "+49 170 334455",
+                "payment_method": "cash",
+                "status": "confirmed",
+            },
+        )
+        self.assertEqual(adm_res.status_code, 302)
+        b_klaus = self.db.execute("SELECT * FROM bookings WHERE email = 'klaus@example.com'").fetchone()
+        self.assertIsNotNone(b_klaus)
+        self.assertEqual(b_klaus["delivery_cents"], 5000)
+        self.assertEqual(b_klaus["zone_name"], "Zone B")
+
+        # 4. Admin changing zone and custom price on existing booking
+        upd_res = self.client.post(
+            f"/admin/buchungen/{b_klaus['id']}/delivery",
+            data={
+                "csrf_token": token,
+                "delivery_type": "delivery",
+                "address": "Musterstr. 1, 10115 Berlin",
+                "zone_id": "custom",
+                "delivery_price": "75,00",
+                "arrival_window": "flexibel",
+            },
+        )
+        self.assertEqual(upd_res.status_code, 302)
+        b_klaus_upd = self.db.execute("SELECT * FROM bookings WHERE id = ?", (b_klaus["id"],)).fetchone()
+        self.assertEqual(b_klaus_upd["zone_name"], "Individuelle Lieferpauschale")
+        self.assertEqual(b_klaus_upd["delivery_cents"], 7500)
+        self.assertEqual(b_klaus_upd["arrival_window"], "flexibel")
 
 
 if __name__ == "__main__":

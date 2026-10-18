@@ -280,10 +280,22 @@ def booking(slug):
         },
         "stripe": bool((settings.get("stripe_secret") or "").strip()),
     }
+    zones = db.execute("SELECT * FROM zones WHERE active = 1 ORDER BY sort_order, id").fetchall()
+    boot["zones"] = [
+        {
+            "id": z["id"],
+            "name": z["name"],
+            "price_cents": int(z["price_cents"]),
+            "price": "kostenlos" if int(z["price_cents"]) == 0 else service.format_euro(int(z["price_cents"])),
+            "badge": service.zone_badge(z),
+        }
+        for z in zones
+    ]
     return render_template(
         "booking.html",
         model=model,
         extras=extras,
+        zones=zones,
         boot=boot,
         checkout=True,
         back_url=url_for("public.model_page", slug=slug),
