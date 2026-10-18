@@ -566,8 +566,22 @@
         <!-- 5. VIEW: LIEFERZONEN -->
         <div id="view-zones" class="view-pane">
           <div class="card-panel">
-            <h2>Lieferzonen &amp; Gebiets-Tarife</h2>
-            <p style="color:#a39890; font-size:14px; margin-top:-6px; margin-bottom:20px;">Lieferpauschalen und abgedeckte Postleitzahlen/Städte.</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h2 style="margin:0;">Lieferzonen &amp; Gebiets-Tarife</h2>
+                <p style="color:#a39890; font-size:14px; margin:4px 0 0;">Lege fest, welche Orte und Postleitzahlen wie viel für die Lieferung kosten (0 € = kostenlose Lieferung).</p>
+              </div>
+              <button class="btn btn-sm" onclick="addNewZone()">+ Neue Lieferzone anlegen</button>
+            </div>
+            
+            <div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2); border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:13px; color:#d1d5db; line-height:1.5;">
+              💡 <strong>So stellst du die Lieferzonen ein:</strong><br>
+              • <strong>Postleitzahlen (PLZ):</strong> Gib z.B. <code>14929, 144, 145, 10, 12</code> ein. Kunden mit einer passenden PLZ erhalten automatisch diese Zone.<br>
+              • <strong>Städte &amp; Ortschaften:</strong> Gib z.B. <code>Treuenbrietzen, Potsdam, Berlin, Jüterbog</code> ein. Wird bei Adresseingabe auf der Karte erkannt.<br>
+              • <strong>Pauschalpreis:</strong> <code>0 €</code> = kostenlose Lieferung. Beliebige Beträge (z.B. <code>35 €</code>, <code>50 €</code>) werden als Liefergebühr berechnet.<br>
+              • <strong>Manuelle Auswahl:</strong> Kunden und Admins können die Zone auch jederzeit manuell aus dem Dropdown auswählen.
+            </div>
+
             <div id="zones-container"></div>
           </div>
         </div>
@@ -1022,9 +1036,13 @@
       const allHtml = (!list || list.length === 0) ? '<tr><td colspan="8" style="padding:24px; color:#a39890; text-align:center;">Noch keine Buchungen vorhanden.</td></tr>' :
         list.map(b => {
           const isPickup = b.delivery_type === 'pickup';
+          const delCents = Number(b.delivery_cents || 0);
           const typeBadge = isPickup 
             ? '<span class="status-badge" style="background:rgba(139,92,246,0.18); color:#c4b5fd; border:1px solid rgba(139,92,246,0.35);">🏪 Selbstabholung</span>'
-            : '<span class="status-badge" style="background:rgba(37,99,235,0.18); color:#93c5fd; border:1px solid rgba(37,99,235,0.35);">🚚 Lieferung</span>';
+            : `<div style="display:flex; flex-direction:column; gap:4px;">
+                 <span class="status-badge" style="background:rgba(37,99,235,0.18); color:#93c5fd; border:1px solid rgba(37,99,235,0.35);">🚚 ${b.zone_name || 'Lieferung'} (${(delCents/100).toFixed(0)} €)</span>
+                 <button type="button" class="btn btn-sm ghost" style="padding:2px 6px; font-size:10px; cursor:pointer;" onclick="promptEditBookingDelivery(${b.id}, '${(b.zone_name || '').replace(/'/g, "\\'")}', ${(delCents/100).toFixed(0)})">✏️ Zone / Preis</button>
+               </div>`;
           return `
             <tr>
               <td><strong>${b.number}</strong></td>
@@ -1537,30 +1555,155 @@
 
     // Render Zones
     function renderZones(zones) {
+      if (!zones || zones.length === 0) {
+        document.getElementById('zones-container').innerHTML = '<p style="color:#a39890; text-align:center; padding:30px;">Keine Lieferzonen vorhanden. Klicke oben auf "+ Neue Lieferzone anlegen".</p>';
+        return;
+      }
       document.getElementById('zones-container').innerHTML = zones.map(z => `
-        <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:8px; padding:18px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <strong style="font-size:16px; color:#fff;">${z.name}</strong>
-            <p style="margin:4px 0 0; color:#a39890; font-size:13px;">${z.note} (${z.cities || 'Alle Gebiete'})</p>
+        <div style="background:#0e0d0c; border:1px solid rgba(255,244,230,0.08); border-radius:10px; padding:20px; margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; gap:12px; align-items:center;">
+              <span style="font-size:20px;">🚚</span>
+              <strong style="font-size:18px; color:#fff; font-family:var(--display);">${z.name}</strong>
+              <label class="check" style="margin:0; font-size:12px; color:#10b981; font-weight:600;">
+                <input type="checkbox" id="z-active-${z.id}" ${z.active !== 0 ? 'checked' : ''}> Aktiv
+              </label>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:14px; color:#a39890; font-weight:600;">Liefergebühr:</span>
+              <input type="number" id="z-price-${z.id}" value="${(z.price_cents/100).toFixed(0)}" style="width:90px; padding:8px 10px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:bold; font-size:16px;"> <span style="font-size:15px; font-weight:600;">€</span>
+            </div>
           </div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:13px; color:#a39890;">Pauschalpreis:</span>
-            <input type="number" id="z-price-${z.id}" value="${(z.price_cents/100).toFixed(0)}" style="width:85px; padding:7px; background:#1c1a17; border:1px solid rgba(255,244,230,0.15); color:#fff; border-radius:6px; font-weight:bold;"> €
-            <button class="btn btn-sm" onclick="saveZone(${z.id})">Speichern</button>
+
+          <div class="form-pair">
+            <div class="form-group">
+              <label>Zonen-Bezeichnung (z.B. Zone 1: Nahbereich / Zone 2: Berlin Umland)</label>
+              <input id="z-name-${z.id}" value="${z.name || ''}" placeholder="z.B. Zone 1 (Treuenbrietzen & Potsdam)">
+            </div>
+            <div class="form-group">
+              <label>Beschreibung / Notiz (wird dem Kunden angezeigt)</label>
+              <input id="z-note-${z.id}" value="${z.note || ''}" placeholder="z.B. Kostenlose Lieferung bis 25 km">
+            </div>
+          </div>
+
+          <div class="form-pair">
+            <div class="form-group">
+              <label>Postleitzahlen / PLZ-Präfixe (kommagetrennt, z.B. 14929, 144, 145, 10)</label>
+              <input id="z-prefixes-${z.id}" value="${z.prefixes || ''}" placeholder="14929, 14467, 14542, 10115...">
+            </div>
+            <div class="form-group">
+              <label>Städte &amp; Ortschaften (kommagetrennt, z.B. Treuenbrietzen, Potsdam, Berlin)</label>
+              <input id="z-cities-${z.id}" value="${z.cities || ''}" placeholder="Treuenbrietzen, Potsdam, Berlin...">
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,244,230,0.06);">
+            <button class="btn btn-sm ghost" type="button" onclick="deleteZone(${z.id}, '${(z.name || '').replace(/'/g, "\\'")}')" style="color:#ef4444; border-color:rgba(239,68,68,0.35);">🗑 Zone löschen</button>
+            <button class="btn btn-sm" type="button" onclick="saveZone(${z.id})">💾 Zone speichern</button>
           </div>
         </div>
       `).join('');
     }
 
     async function saveZone(id) {
-      const priceCents = Math.round(parseFloat(document.getElementById(`z-price-${id}`).value) * 100);
+      const payload = {
+        id,
+        name: document.getElementById(`z-name-${id}`).value.trim(),
+        price_cents: Math.round(parseFloat(document.getElementById(`z-price-${id}`).value) * 100),
+        note: document.getElementById(`z-note-${id}`).value.trim(),
+        prefixes: document.getElementById(`z-prefixes-${id}`).value.trim(),
+        cities: document.getElementById(`z-cities-${id}`).value.trim(),
+        active: document.getElementById(`z-active-${id}`).checked ? 1 : 0
+      };
       const res = await fetch('/api/admin/zone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ zone: { id, price_cents: priceCents } })
+        body: JSON.stringify({ zone: payload })
       });
       const data = await res.json();
-      if (data.ok) showToast('Lieferzone in Turso gespeichert!');
+      if (data.ok) {
+        showToast('Lieferzone in Turso gespeichert!');
+        loadData();
+      } else {
+        showToast('Fehler beim Speichern: ' + (data.error || 'Unbekannt'), true);
+      }
+    }
+
+    async function addNewZone() {
+      const name = prompt('Name der neuen Lieferzone (z.B. Zone 3: Großraum Berlin):');
+      if (!name || !name.trim()) return;
+      const priceStr = prompt('Lieferpauschale in Euro (z.B. 0 für kostenlos, 45, 60 etc.):', '50');
+      if (priceStr === null) return;
+      const priceCents = Math.round(parseFloat(priceStr.replace(',', '.')) * 100) || 0;
+      const res = await fetch('/api/admin/zone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({
+          zone: {
+            name: name.trim(),
+            price_cents: priceCents,
+            note: 'Lieferung nach Absprache',
+            prefixes: '',
+            cities: '',
+            active: 1
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Neue Lieferzone "${name}" angelegt!`);
+        loadData();
+      } else {
+        showToast('Fehler beim Anlegen: ' + (data.error || 'Unbekannt'), true);
+      }
+    }
+
+    async function deleteZone(id, name) {
+      if (!confirm(`Möchtest du die Lieferzone "${name || 'Zone'}" wirklich unwiderruflich löschen?`)) return;
+      const res = await fetch('/api/admin/zone/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Lieferzone gelöscht!');
+        loadData();
+      } else {
+        showToast('Fehler beim Löschen: ' + (data.error || 'Unbekannt'), true);
+      }
+    }
+
+    function promptEditBookingDelivery(id, currentZone, currentPrice) {
+      const zonesList = (currentData && currentData.zones) || [];
+      const zoneNames = zonesList.map(z => `${z.name} (${(z.price_cents/100).toFixed(0)} €)`).join('\n• ');
+      const newZone = prompt(`Lieferzone für diese Buchung wählen:\n• ${zoneNames}\n\nAktuell: ${currentZone || 'Nicht gesetzt'}\nGib den Zonen-Namen oder eine individuelle Bezeichnung ein:`, currentZone || (zonesList[0]?.name || 'Zone 1'));
+      if (newZone === null) return;
+      const matchingZone = zonesList.find(z => z.name.toLowerCase() === newZone.trim().toLowerCase());
+      const defaultPrice = matchingZone ? (matchingZone.price_cents / 100).toFixed(0) : currentPrice;
+      const newPriceStr = prompt(`Lieferpreis in Euro für diese Buchung:\n(z.B. 0 für kostenlos, 45, 60 etc.)`, defaultPrice);
+      if (newPriceStr === null) return;
+      const priceCents = Math.round(parseFloat(newPriceStr.replace(',', '.')) * 100);
+      if (isNaN(priceCents) || priceCents < 0) {
+        alert('Ungültiger Preis eingegeben.');
+        return;
+      }
+      updateBookingDelivery(id, newZone.trim(), priceCents);
+    }
+
+    async function updateBookingDelivery(id, zoneName, deliveryCents) {
+      const res = await fetch('/api/admin/booking/delivery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ id, zone_name: zoneName, delivery_cents: deliveryCents })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Zone & Lieferpreis für die Buchung aktualisiert!');
+        loadData();
+      } else {
+        showToast('Fehler beim Aktualisieren: ' + (data.error || 'Unbekannt'), true);
+      }
     }
 
     // Render Messages

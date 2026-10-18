@@ -636,6 +636,31 @@ exports.handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
       }
 
+      // POST /api/admin/booking/delivery - Update booking zone & delivery price
+      if (path === 'admin/booking/delivery') {
+        let body = {};
+        try { body = JSON.parse(event.body || '{}'); } catch (_e) {}
+        const bookingId = Number(body.id);
+        const zoneName = body.zone_name !== undefined ? String(body.zone_name) : null;
+        const deliveryCents = body.delivery_cents !== undefined ? Number(body.delivery_cents) : null;
+        if (bookingId && deliveryCents !== null) {
+          const row = (await db.execute({ sql: `SELECT * FROM bookings WHERE id = ?`, args: [bookingId] })).rows[0];
+          if (row) {
+            const rent = Number(row.rent_cents) || 0;
+            const extras = Number(row.extras_cents) || 0;
+            const deposit = Number(row.deposit_cents) || 0;
+            const voucher = Number(row.voucher_cents) || 0;
+            const newGross = Math.max(0, rent + extras + deliveryCents - voucher) + deposit;
+            const newVat = Math.round(newGross * 19 / 119);
+            await db.execute({
+              sql: `UPDATE bookings SET delivery_cents = ?, zone_name = COALESCE(?, zone_name), gross_cents = ?, vat_cents = ? WHERE id = ?`,
+              args: [deliveryCents, zoneName, newGross, newVat, bookingId]
+            });
+          }
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
+
       // POST /api/admin/content - Update website CMS content
       if (path === 'admin/content') {
         let body = {};
@@ -749,7 +774,7 @@ exports.handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
       }
 
-      // POST /api/admin/zone - Update zone
+      // POST /api/admin/zone - Create or update zone
       if (path === 'admin/zone') {
         let body = {};
         try {
@@ -757,9 +782,41 @@ exports.handler = async (event) => {
         } catch (_e) {}
         const z = body.zone || {};
         if (z.id) {
+          const sets = ['name = ?', 'prefixes = ?', 'cities = ?', 'price_cents = ?', 'note = ?'];
+          const args = [z.name || '', z.prefixes || '', z.cities || '', Number(z.price_cents) || 0, z.note || ''];
+          if (z.active !== undefined) {
+            sets.push('active = ?');
+            args.push(z.active ? 1 : 0);
+          }
+          args.push(Number(z.id));
           await db.execute({
-            sql: `UPDATE zones SET name = ?, prefixes = ?, cities = ?, price_cents = ?, note = ? WHERE id = ?`,
-            args: [z.name || '', z.prefixes || '', z.cities || '', Number(z.price_cents) || 0, z.note || '', Number(z.id)],
+            sql: `UPDATE zones SET ${sets.join(', ')} WHERE id = ?`,
+            args,
+          });
+        } else if (z.name) {
+          await db.execute({
+            sql: `INSERT INTO zones (name, prefixes, cities, price_cents, note, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, 10)`,
+            args: [
+              z.name || '',
+              z.prefixes || '',
+              z.cities || '',
+              Number(z.price_cents) || 0,
+              z.note || '',
+              z.active !== undefined ? (z.active ? 1 : 0) : 1
+            ],
+          });
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
+
+      // POST /api/admin/zone/delete - Delete zone
+      if (path === 'admin/zone/delete') {
+        let body = {};
+        try { body = JSON.parse(event.body || '{}'); } catch (_e) {}
+        if (body.id) {
+          await db.execute({
+            sql: `DELETE FROM zones WHERE id = ?`,
+            args: [Number(body.id)],
           });
         }
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
