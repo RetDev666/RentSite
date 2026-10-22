@@ -95,9 +95,46 @@
     const cards = [...document.querySelectorAll(".fleet-card")];
     const apply = () => {
       let visible = 0;
+      const pVal = (persons.value || "alle").trim();
+      const sVal = (size.value || "alle").toLowerCase().trim();
+
       cards.forEach((card) => {
-        const ok = (persons.value === "alle" || card.dataset.persons === persons.value)
-          && (size.value === "alle" || card.dataset.size === size.value);
+        let pOk = true;
+        if (pVal !== "alle") {
+          let cMin = parseInt(card.dataset.capMin, 10);
+          let cMax = parseInt(card.dataset.capMax, 10);
+          if (isNaN(cMin) || isNaN(cMax)) {
+            const pParts = (card.dataset.persons || "").split("-");
+            cMin = parseInt(pParts[0], 10) || 1;
+            cMax = parseInt(pParts[1], 10) || 10;
+          }
+          if (pVal.includes("-")) {
+            const [rMin, rMax] = pVal.split("-").map(Number);
+            pOk = cMax >= rMin && cMin <= rMax;
+          } else if (pVal.endsWith("+")) {
+            const rMin = parseInt(pVal, 10);
+            pOk = cMax >= rMin;
+          } else {
+            const count = parseInt(pVal, 10);
+            pOk = count >= cMin && count <= cMax;
+          }
+        }
+
+        let sOk = true;
+        if (sVal !== "alle") {
+          const cardSize = (card.dataset.size || "").toLowerCase().trim();
+          if (sVal === "kompakt" || sVal === "s") {
+            sOk = cardSize === "kompakt" || cardSize === "s";
+          } else if (sVal === "mittel" || sVal === "m") {
+            sOk = cardSize === "mittel" || cardSize === "m";
+          } else if (sVal === "gross" || sVal === "l" || sVal === "xl") {
+            sOk = cardSize === "gross" || cardSize === "l" || cardSize === "xl";
+          } else {
+            sOk = cardSize === sVal;
+          }
+        }
+
+        const ok = pOk && sOk;
         card.hidden = !ok;
         if (ok) {
           visible += 1;

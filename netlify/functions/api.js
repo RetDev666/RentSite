@@ -131,6 +131,18 @@ exports.handler = async (event) => {
     }
 
     // -------------------------------------------------------------
+    // GET /api/models
+    // -------------------------------------------------------------
+    if (path === 'models' || path.startsWith('models')) {
+      const res = await db.execute('SELECT * FROM models WHERE active = 1 ORDER BY sort_order, id');
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ ok: true, models: res.rows }),
+      };
+    }
+
+    // -------------------------------------------------------------
     // GET /api/zone
     // -------------------------------------------------------------
     if (path.startsWith('zone')) {

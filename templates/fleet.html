@@ -13,18 +13,22 @@
       <span class="sr-only">Personen</span>
       <select id="filter-persons">
         <option value="alle">Personen (Alle)</option>
+        <option value="4">4 Personen</option>
+        <option value="2">2 Personen</option>
+        <option value="6">6 Personen</option>
         <option value="2-4">2–4 Personen</option>
         <option value="4-6">4–6 Personen</option>
         <option value="6-8">6–8 Personen</option>
+        <option value="8+">8+ Personen</option>
       </select>
     </label>
     <label>
       <span class="sr-only">Größe</span>
       <select id="filter-size">
         <option value="alle">Größe (Alle)</option>
-        <option value="kompakt">Kompakt</option>
-        <option value="mittel">Mittel</option>
-        <option value="gross">Groß</option>
+        <option value="kompakt">Kompakt (S)</option>
+        <option value="mittel">Mittel (M/L)</option>
+        <option value="gross">Groß (L/XL)</option>
       </select>
     </label>
     <label class="filter-search">
@@ -36,7 +40,7 @@
   <p id="zone-banner" class="zone-banner" hidden></p>
   <div class="card-grid two" id="fleet-grid">
     {% for model in models %}
-    <article class="model-card fleet-card" data-persons="{{ model.persons }}" data-size="{{ model.size }}">
+    <article class="model-card fleet-card" data-persons="{{ model.persons }}" data-cap-min="{{ model.capacity_min }}" data-cap-max="{{ model.capacity_max }}" data-size="{{ model.size }}" data-id="{{ model.id }}">
       <a class="model-photo" href="{{ url_for('public.model_page', slug=model.slug) }}">
         <img src="{{ model.images[0] }}" alt="{{ model.name }}">
         {% if model.badge %}<span class="badge">{{ model.badge }}</span>{% endif %}
@@ -51,7 +55,10 @@
           <li>{{ icon(feature.icon) }}<span>{{ feature.label }}</span></li>
           {% endfor %}
         </ul>
-        <a class="btn btn-ghost" href="{{ url_for('public.model_page', slug=model.slug) }}">Details ansehen</a>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <a class="btn" href="{{ url_for('public.booking', slug=model.slug) }}" style="flex:1; text-align:center;">Jetzt buchen</a>
+          <a class="btn btn-ghost" href="{{ url_for('public.model_page', slug=model.slug) }}">Details</a>
+        </div>
       </div>
     </article>
     {% endfor %}

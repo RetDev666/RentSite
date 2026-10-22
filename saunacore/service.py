@@ -1442,6 +1442,47 @@ def seed_demo(conn) -> None:
             "images": [f"/static/uploads/fasssauna-{i}.jpg" for i in range(1, 20)],
             "sort_order": 3,
         },
+        {
+            "slug": "fasssauna-klassik",
+            "name": "Amphora-Spa Fasssauna Klassik",
+            "subtitle": "Mobile Fasssauna für 2–4 Personen auf PKW-Anhänger",
+            "badge": "Beliebt & Kompakt",
+            "price_cents": 7500,
+            "capacity_min": 2,
+            "capacity_max": 4,
+            "size": "kompakt",
+            "features": [
+                {"icon": "users", "label": "2–4 Personen"},
+                {"icon": "flame", "label": "Harvia Holzofen"},
+                {"icon": "spark", "label": "Schnell aufgeheizt"},
+                {"icon": "leaf", "label": "Thermoholz"},
+            ],
+            "specs": [
+                {"icon": "users", "label": "Kapazität", "value": "2–4 Personen"},
+                {"icon": "flame", "label": "Ofen", "value": "Harvia Holzofen mit Saunasteinen"},
+                {"icon": "leaf", "label": "Holz", "value": "Premium Thermoholz"},
+                {"icon": "truck", "label": "Lieferung", "value": "1 € / km oder Selbstabholung"},
+                {"icon": "spark", "label": "Kaution", "value": "300 € bar bei Übergabe"},
+            ],
+            "summary": "Kompakte und wendige mobile Fasssauna für bis zu 4 Personen. Schnell aufgeheizt und ideal für kleine Gärten, Terrassen oder Wochenendausflüge.",
+            "story_title": "Gemütliche Saunagänge im vertrauten Kreis.",
+            "story": "Unsere Amphora-Spa Fasssauna Klassik kombiniert kompakte Außenmaße mit vollem Sauna-Komfort für bis zu 4 Personen. Innerhalb kürzester Zeit einsatzbereit mit herrlich duftendem Holzaufguss.",
+            "highlights": [
+                "Kompakte mobile Fasssauna für bis zu 4 Personen auf PKW-Anhänger",
+                "Schnelle Aufheizzeit (nur ca. 30–45 Minuten bis 90°C)",
+                "Harvia Holzofen für authentischen finnischen Aufguss",
+                "Gemütliche Innenbeleuchtung über 230V oder Akku-System",
+                "Lieferung oder Selbstabholung mit Führerschein Klasse B/BE",
+            ],
+            "images": [
+                "/static/images/model-s.jpg",
+                "/static/uploads/fasssauna-1.jpg",
+                "/static/uploads/fasssauna-2.jpg",
+                "/static/uploads/fasssauna-3.jpg",
+                "/static/uploads/fasssauna-4.jpg",
+            ],
+            "sort_order": 4,
+        },
     ]
     for item in models:
         conn.execute(

@@ -698,6 +698,56 @@ class SaunacoreTests(unittest.TestCase):
         self.assertEqual(b_klaus_upd["delivery_cents"], 7500)
         self.assertEqual(b_klaus_upd["arrival_window"], "flexibel")
 
+    def test_model_4_booking_and_capacity(self):
+        # 1. Model 4 exists and is active
+        m4 = self.db.execute("SELECT * FROM models WHERE slug = 'fasssauna-klassik'").fetchone()
+        self.assertIsNotNone(m4)
+        self.assertEqual(m4["capacity_min"], 2)
+        self.assertEqual(m4["capacity_max"], 4)
+        self.assertEqual(m4["price_cents"], 7500)
+
+        # 2. Quote calculation for Model 4
+        start = (self.today + timedelta(days=10)).isoformat()
+        end = (self.today + timedelta(days=12)).isoformat()
+        q_res = self.quote(
+            model_id=m4["id"],
+            start=start,
+            end=end,
+            delivery_type="pickup",
+        )
+        self.assertEqual(q_res.status_code, 200)
+        q_data = q_res.get_json()
+        self.assertTrue(q_data["ok"])
+        self.assertEqual(q_data["nights"], 2)
+        self.assertEqual(q_data["rent_cents"], 15000)
+
+        # 3. Create booking for Model 4
+        b_res = self.book(
+            model_id=m4["id"],
+            start=start,
+            end=end,
+            delivery_type="pickup",
+            first_name="Anna",
+            last_name="Schmidt",
+            email="anna@example.com",
+            phone="+49 170 1234567",
+            payment_method="cash",
+            arrival_window="vormittag",
+            access_road=1,
+            access_even=1,
+            access_person=1,
+            access_rules=1,
+        )
+        self.assertEqual(b_res.status_code, 200)
+        b_data = b_res.get_json()
+        self.assertTrue(b_data["ok"])
+        booking = self.db.execute("SELECT * FROM bookings WHERE number = ?", (b_data["number"],)).fetchone()
+        self.assertIsNotNone(booking)
+        self.assertEqual(booking["model_name"], "Amphora-Spa Fasssauna Klassik")
+        self.assertEqual(booking["rent_cents"], 15000)
+        self.assertEqual(booking["deposit_cents"], 30000)
+        self.assertEqual(booking["gross_cents"], 45000)
+
 
 if __name__ == "__main__":
     unittest.main()
